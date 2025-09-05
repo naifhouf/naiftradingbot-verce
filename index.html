@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<title>NAIF VIP • Signals (v16)</title>
+<style>
+  :root{--blue:#38BDF8;--glass:rgba(255,255,255,.08);--glassb:rgba(255,255,255,.12);--bg:#0b1220}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:#fff;font-family:Cairo,Segoe UI,Arial;user-select:none;
+            -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; touch-action:manipulation;}
+  #candlesCanvas{position:fixed;inset:0;z-index:-1;opacity:.23;filter:blur(.4px)}
+  .top-center{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:25;display:flex;flex-direction:column;align-items:center;gap:8px}
+  .naif-anim{width:80px;height:80px;border-radius:18px;display:grid;place-items:center;
+    background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.12),rgba(56,189,248,.25) 60%,rgba(11,18,32,.9));
+    border:1px solid var(--glassb);backdrop-filter:blur(10px);
+    box-shadow:0 10px 24px rgba(0,0,0,.35),inset 0 0 22px rgba(56,189,248,.35);animation:pulse 3s ease-in-out infinite}
+  .naif-anim span{font-weight:900;font-size:18px;letter-spacing:1px;color:var(--blue);
+    text-shadow:0 0 18px rgba(56,189,248,.55);animation:glow 2.2s ease-in-out infinite alternate}
+  /* الأيقونة ثابتة بالمكان (لا تغيير موضع)، الانيميشن Scale فقط */
+  @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.04)}100%{transform:scale(1)}}
+  @keyframes glow{from{filter:drop-shadow(0 0 6px rgba(56,189,248,.35))}to{filter:drop-shadow(0 0 16px rgba(56,189,248,.75))}}
+  .floating-clock{position:fixed;left:12px;top:12px;background:rgba(255,255,255,.05);border:1px solid var(--glassb);
+    padding:10px 14px;border-radius:14px;backdrop-filter:blur(12px);z-index:9999}
+  .container{max-width:980px;margin:120px auto 90px;padding:0 16px}
+  .glass-card{background:var(--glass);border:1px solid var(--glassb);border-radius:24px;padding:24px 18px;margin:14px 0;backdrop-filter:blur(18px)}
+  input[type=password],select{width:100%;padding:14px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.2);
+    background:rgba(255,255,255,.08);color:#fff;margin:8px 0 10px; font-size:16px;}
+  /* القائمة واضحة بلا ضبابية */
+  select#pairSelect, select#pairSelect *{ filter:none!important; opacity:1!important; text-shadow:none!important; -webkit-text-fill-color:#fff; color:#fff; }
+  select#pairSelect{background:rgba(255,255,255,.10);}
+  option, optgroup{background:#0b1220; color:#fff;}
+  .btn{border:none;color:#fff;cursor:pointer;padding:14px 16px;border-radius:14px;font-weight:700; font-size:16px;}
+  .btn[disabled]{opacity:.6;cursor:not-allowed}
+  .btn-primary{background:linear-gradient(135deg,#3b82f6,#2563eb)}
+  .btn-green{background:linear-gradient(135deg,#11998e,#38ef7d)}
+  .btn-red{background:linear-gradient(135deg,#fc4a1a,#f7b733)}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row>.btn{flex:1 0 220px}
+  .status-box{margin:10px 0;padding:12px 14px;border-radius:12px;font-weight:700;border:1px solid transparent; white-space:pre-line }
+  .ok{color:#9CFFCB;background:rgba(56,239,125,.12);border-color:rgba(56,239,125,.25)}
+  .bad{color:#ffb3b3;background:rgba(255,107,107,.12);border-color:rgba(255,107,107,.25)}
+  .hint{opacity:.8;font-size:.9rem}
+  .loading-overlay{position:fixed;inset:0;background:rgba(13,25,43,.9);display:none;justify-content:center;align-items:center;z-index:1000}
+  .loading-spinner{width:50px;height:50px;border:4px solid rgba(255,255,255,.1);border-left:4px solid #667eea;border-radius:50%;animation:spin 1s linear infinite}
+  @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+  footer{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;text-align:center;opacity:.9}
+  .timers{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .chip{padding:8px 12px;border:1px solid rgba(255,255,255,.2);border-radius:12px;background:rgba(255,255,255,.06);font-weight:700}
+  #mainContainer h1{ text-align:center; } /* العنوان في الوسط */
+  @media (max-width:520px){
+    .container{margin-top:110px}
+    .naif-anim{width:64px;height:64px}
+  }
+</style>
+</head>
+<body>
+<canvas id="candlesCanvas"></canvas>
+<div class="top-center"><div class="naif-anim"><span>NAIF</span></div></div>
+<div class="floating-clock"><div id="clock">--:--:--</div><div>UTC+3 • Asia/Riyadh</div></div>
+
+<div class="loading-overlay" id="loadingOverlay"><div class="loading-spinner"></div></div>
+
+<div class="container">
+  <div id="passwordBox" class="glass-card">
+    <h1>🔐 بوابة الدخول</h1>
+    <p>أدخل رقم السيريال للمتابعة</p>
+    <input id="passwordInput" type="password" placeholder="أدخل السيريال هنا" autocomplete="off"/>
+    <div class="row">
+      <button id="loginBtn" class="btn btn-primary" onclick="checkPassword()">تسجيل الدخول</button>
+      <button id="musicBtn" class="btn btn-green" onclick="toggleMusic()">تشغيل الموسيقى 🎼</button>
+    </div>
+    <div id="loginMsg" class="status-box" style="display:none"></div>
+    <div class="hint">⚠️ كل ضغطة مُسجَّلة للأمان</div>
+  </div>
+
+  <div id="mainContainer" class="glass-card" style="display:none">
+    <h1>POCKET OPTION BOT VIP</h1>
+    <div class="timers">
+      <div id="expireBox" class="chip">⏳ المدة المتبقية: --:--:--</div>
+      <div id="dayBox" class="chip">🗓️ اليوم: --:--:--</div>
+      <div id="tradeBox" class="chip">🎯 الصفقة: —</div>
+    </div>
+    <div style="display:flex;justify-content:center;margin-top:8px">
+      <button id="logoutBtn" class="btn btn-red" onclick="logout()">تسجيل خروج</button>
+    </div>
+  </div>
+
+  <div id="signalsCard" class="glass-card" style="display:none">
+    <label>اختر الزوج:</label>
+    <select id="pairSelect">
+      <option value="" disabled selected>اختر الزوج</option>
+      <!-- OTC أعلى القائمة -->
+      <optgroup label="أزواج OTC (اصطناعية)">
+         <option data-otc="1" value="BHD/CNY">🇧🇭 BHD/CNY 🇨🇳</option>
+         <option data-otc="1" value="USD/EGP">🇺🇸 USD/EGP 🇪🇬</option>
+         <option data-otc="1" value="USD/RUB">🇺🇸 USD/RUB 🇷🇺</option>
+         <option data-otc="1" value="USD/BRL">🇺🇸 USD/BRL 🇧🇷</option>
+         <option data-otc="1" value="AED/CNY">🇦🇪 AED/CNY 🇨🇳</option>
+         <option data-otc="1" value="SAR/CNY">🇸🇦 SAR/CNY 🇨🇳</option>
+         <option data-otc="1" value="QAR/CNY">🇶🇦 QAR/CNY 🇨🇳</option>
+         <option data-otc="1" value="USD/MXN">🇺🇸 USD/MXN 🇲🇽</option>
+         <option data-otc="1" value="CAD/JPY">🇨🇦 CAD/JPY 🇯🇵</option>
+         <option data-otc="1" value="AUD/JPY">🇦🇺 AUD/JPY 🇯🇵</option>
+         <option data-otc="1" value="NZD/JPY">🇳🇿 NZD/JPY 🇯🇵</option>
+         <option data-otc="1" value="EUR/HUF">🇪🇺 EUR/HUF 🇭🇺</option>
+         <option data-otc="1" value="EUR/TRY">🇪🇺 EUR/TRY 🇹🇷</option>
+      </optgroup>
+      <!-- أزواج السوق الحقيقي أسفل -->
+      <optgroup label="أزواج السوق الحقيقي">
+          <option value="EUR/USD">🇪🇺 EUR/USD 🇺🇸</option>
+          <option value="GBP/USD">🇬🇧 GBP/USD 🇺🇸</option>
+          <option value="USD/JPY">🇺🇸 USD/JPY 🇯🇵</option>
+          <option value="USD/CHF">🇺🇸 USD/CHF 🇨🇭</option>
+          <option value="USD/CAD">🇺🇸 USD/CAD 🇨🇦</option>
+          <option value="AUD/USD">🇦🇺 AUD/USD 🇺🇸</option>
+          <option value="NZD/USD">🇳🇿 NZD/USD 🇺🇸</option>
+          <option value="EUR/GBP">🇪🇺 EUR/GBP 🇬🇧</option>
+          <option value="GBP/JPY">🇬🇧 GBP/JPY 🇯🇵</option>
+          <option value="EUR/JPY">🇪🇺 EUR/JPY 🇯🇵</option>
+          <option value="XAU/USD">🥇 XAU/USD 🇺🇸</option>
+          <option value="BTC/USD">₿ BTC/USD 🇺🇸</option>
+      </optgroup>
+    </select>
+
+    <div class="row" style="margin-top:6px">
+      <label style="width:100%">مدة الصفقة:</label>
+      <select id="tfSelect">
+        <option value="1">1 دقيقة</option>
+        <option value="5" selected>5 دقائق</option>
+        <option value="15">15 دقيقة</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <button id="analyzeBtn" class="btn btn-green" onclick="analyze()">🔍 تحليل</button>
+    </div>
+    <div class="glass-card" style="margin-top:12px"><div class="status-box" id="result" style="margin:0">—</div></div>
+  </div>
+</div>
+
+<footer>جميع الحقوق محفوظة للمطور © <b>@najran2015</b></footer>
+
+<script>
+/* ===== KeyAuth (POST v1.3) — بدون HWID افتراضيًا ===== */
+const APP = { name:'BOTY', ownerid:'5RvEKZwAIM', ver:'1.0' };
+const API_BASE = (localStorage.getItem('naif_api_base') || 'https://prod.keyauth.com/api/1.3/');
+let authBusy = false;
+
+/* ===== Twelve Data (السوق الحقيقي فقط) ===== */
+const TWELVE_KEY = '6cdf4e70d5a246efa5e23c208de894b5';
+const TD_BASE = 'https://api.twelvedata.com';
+const CACHE_TTL_MS = 180000; // 180s
+let lastFetchTs = 0;
+const MIN_FETCH_GAP_MS = 10000; // حد أقصى طلب كل 10 ثواني
+const inflight = new Map();
+
+/* ===== أصوات هادئة + دعم الجوال ===== */
+let AC=null, master=null, musicIv=null, musicOn=false;
+function ensureAC(){ 
+  if(!AC){ 
+    const C = window.AudioContext||window.webkitAudioContext; 
+    AC=new C(); master=AC.createGain(); master.gain.value=0.06; master.connect(AC.destination);
+  } 
+  if(AC.state==='suspended'){ AC.resume?.(); }
+}
+['click','touchend','pointerup'].forEach(ev=>document.addEventListener(ev, e=>{ if(e.target.closest('button')) clickFx(); ensureAC(); }, true));
+function clickFx(){ try{ ensureAC(); const o=AC.createOscillator(), g=AC.createGain(); o.type='triangle'; o.frequency.value=880; o.connect(g); g.connect(master); const t=AC.currentTime; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.12,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+0.08); o.start(t); o.stop(t+0.12);}catch(e){} }
+function successFx(){ try{ ensureAC(); [660,990,1318].forEach((f,i)=>{ const o=AC.createOscillator(), g=AC.createGain(); o.type='sine'; o.frequency.value=f; o.connect(g); g.connect(master); const t=AC.currentTime+i*0.12; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.18,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+0.18); o.start(t); o.stop(t+0.22); }); }catch(e){} }
+function errorFx(){ try{ ensureAC(); const o=AC.createOscillator(), g=AC.createGain(); o.type='sawtooth'; o.frequency.value=140; o.connect(g); g.connect(master); const t=AC.currentTime; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.18,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+0.25); o.start(t); o.stop(t+0.28);}catch(e){} }
+function startMusic(){ ensureAC(); musicOn=true; const notes=[261.63,329.63,392.00,440.00,493.88,523.25]; if(musicIv) clearInterval(musicIv); musicIv=setInterval(()=>{ notes.forEach((f,i)=>{ const o=AC.createOscillator(), g=AC.createGain(); o.type='sine'; o.frequency.value=f; o.connect(g); g.connect(master); const t=AC.currentTime+i*0.18; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.12,t+0.03); g.gain.exponentialRampToValueAtTime(0.0001,t+0.5); o.start(t); o.stop(t+0.52); }); }, 1200); }
+function stopMusic(){ musicOn=false; if(musicIv) clearInterval(musicIv); }
+function toggleMusic(){ musicOn? stopMusic(): startMusic(); const b=document.getElementById('musicBtn'); if(b) b.textContent = (musicOn? 'إيقاف الموسيقى 🎼' : 'تشغيل الموسيقى 🎼'); }
+
+/* ===== أدوات صغيرة ===== */
+function showMsg(html,c='ok'){ const box=document.getElementById('loginMsg'); box.style.display='block'; box.className='status-box '+c; box.innerHTML=html; }
+function setBtn(on){ const btn=document.getElementById('loginBtn'); if(!btn) return; btn.disabled=!on; btn.textContent = on ? 'تسجيل الدخول' : 'جاري التحقق…'; }
+async function sha256Str(s){ const enc = new TextEncoder().encode(s); const buf = await crypto.subtle.digest('SHA-256', enc); return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
+function asForm(d){ const p=new URLSearchParams(); Object.entries(d).forEach(([k,v])=>{ if(v!==undefined && v!==null) p.append(k,String(v)); }); return p; }
+function looksHtml(t){ const s=(t||'').trim(); return s.startsWith('<') || s.includes('<!DOCTYPE html>') || s.includes('<html'); }
+function showLoading(on){ document.getElementById('loadingOverlay').style.display = on ? 'flex' : 'none'; }
+
+/* ===== اتصال KeyAuth ===== */
+async function apiPost(base, data){
+  const body = asForm(data);
+  const r = await fetch(base, { method:'POST', headers:{ 'Content-Type':'application/x-www-form-urlencoded', 'Accept':'application/json,text/plain,*/*' }, body });
+  const text = await r.text();
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  if(looksHtml(text)) throw new Error('HTML');
+  let j=null; try { j = JSON.parse(text); } catch(e){ throw new Error('Not JSON'); }
+  return j;
+}
+async function keyauthInit(){
+  const hash = await sha256Str('naif-web-'+APP.ver);
+  const j = await apiPost(API_BASE, { type:'init', name:APP.name, ownerid:APP.ownerid, ver:APP.ver, hash });
+  if(!j.success) throw new Error(j.message||'init failed'); return j.sessionid;
+}
+async function keyauthLicense(sessionid, key){
+  const payload = { type:'license', key, sessionid, name:APP.name, ownerid:APP.ownerid };
+  let j = await apiPost(API_BASE, payload);
+  if(!j.success && /hwid/i.test(j.message||'')){
+    try{
+      const hw = await sha256Str(navigator.userAgent + '|' + navigator.platform);
+      j = await apiPost(API_BASE, { ...payload, hwid: hw });
+    }catch(e){}
+  }
+  return j;
+}
+function logout(){ localStorage.removeItem('naif_active'); location.reload(); }
+(function autoLogin(){
+  try{
+    const saved = JSON.parse(localStorage.getItem('naif_active')||'null');
+    if(saved && (!saved.exp || (saved.exp*1000>Date.now()))){
+      showMain(saved.exp);
+    }
+  }catch(e){}
+})();
+
+function normalizeExpiryTs(exp){
+  if(!exp) return null;
+  let n = Number(exp);
+  if(!isFinite(n) || n<=0) return null;
+  if(n > 1e12) return Math.floor(n/1000);  // ms -> s
+  if(n > 1e9 && n < 2e10) return Math.floor(n); // seconds
+  if(n < 1e9){ return Math.floor(Date.now()/1000) + n; } // offset seconds
+  return Math.floor(n);
+}
+
+async function checkPassword(){
+  if(authBusy) return;
+  const code = document.getElementById('passwordInput').value.trim();
+  if(!code){ showMsg('⚠️ أدخل السيريال أولًا','bad'); errorFx(); return; }
+  authBusy = true; setBtn(false); showLoading(true);
+  try{
+    showMsg('⌛ جارِ التحقق من السيريال…','ok');
+    let sid = await keyauthInit();
+    let res = await keyauthLicense(sid, code);
+    if(!res.success && /session not found|only.*opened/i.test((res.message||'').toLowerCase())){
+      sid = await keyauthInit();
+      res = await keyauthLicense(sid, code);
+    }
+    if(res.success){
+      successFx();
+      let exp = null;
+      const paths = [
+        ['info','expires'], ['info','expiry'], ['info','expiration'], ['expiry'], ['expires'],
+        ['subscriptions','0','expiry'], ['info','subscriptions','0','expiry'], ['sub','expiry']
+      ];
+      for(const p of paths){
+        let v=res; for(const k of p){ v = (v||{})[k]; }
+        if(v){ exp = Number(v); break; }
+      }
+      const expNorm = normalizeExpiryTs(exp);
+      localStorage.setItem('naif_active', JSON.stringify({code:code, sid:sid, exp:expNorm||null}));
+      document.getElementById('loginMsg').style.display='none';
+      showMain(expNorm||null);
+    } else {
+      throw new Error(res.message || 'فشل التحقق');
+    }
+  }catch(err){
+    console.error(err); errorFx();
+    showMsg('❌ '+(err.message||'فشل في التحقق'), 'bad');
+  } finally {
+    authBusy = false; setBtn(true); showLoading(false);
+  }
+}
+
+/* ===== أدوات التحليل (المؤشرات) ===== */
+function toNum(x){const n=Number(x);return isFinite(n)?n:0;}
+function parseSeries(values){
+  const arr = values.map(v=>({
+    t: new Date(v.datetime.replace(' ', 'T')+'Z').getTime(),
+    o: toNum(v.open), h: toNum(v.high), l: toNum(v.low), c: toNum(v.close),
+    v: toNum(v.volume)
+  })).reverse();
+  return arr;
+}
+function SMA(arr, p, sel=x=>x.c){ const out=[]; let sum=0;
+  for(let i=0;i<arr.length;i++){ sum += sel(arr[i]); if(i>=p) sum -= sel(arr[i-p]); out.push(i>=p-1? (sum/p): NaN); } return out; }
+function EMA(src,p,sel=x=>x.c){ const arr=Array.isArray(src)?src:src.map(x=>({c:x})); const out=[]; const k=2/(p+1); let ema=0;
+  for(let i=0;i<arr.length;i++){ const val=sel(arr[i]); if(i===0) ema=val; else ema=val*k + ema*(1-k); out.push(ema); } return out; }
+function RSI(arr,p=14){ const out=[]; let gain=0, loss=0;
+  for(let i=1;i<arr.length;i++){ const ch = arr[i].c - arr[i-1].c; const g=Math.max(0,ch), l=Math.max(0,-ch);
+    if(i<=p){ gain += g; loss += l; if(i===p){ const rs=(gain/p)/((loss/p)||1e-9); out.push(100-(100/(1+rs))); } else out.push(NaN); }
+    else { gain = (gain*(p-1)+g)/p; loss = (loss*(p-1)+l)/p; const rs=(gain)/((loss)||1e-9); out.push(100-(100/(1+rs))); } }
+  out.unshift(NaN); return out; }
+function MACD(arr, fast=12, slow=26, signal=9){
+  const efast = EMA(arr, fast), eslow = EMA(arr, slow);
+  const macd = efast.map((v,i)=>v-eslow[i]);
+  const sig = EMA(macd.map((v,i)=>({c:v})), signal, x=>x.c);
+  const hist = macd.map((v,i)=>v - sig[i]);
+  return { macd, sig, hist };
+}
+function STOK(arr, p=14, d=3){ const k=[];
+  for(let i=0;i<arr.length;i++){ if(i<p-1){ k.push(NaN); continue; }
+    let hi=-Infinity, lo=+Infinity; for(let j=i-p+1;j<=i;j++){ hi=Math.max(hi,arr[j].h); lo=Math.min(lo,arr[j].l); }
+    const val = ((arr[i].c - lo)/((hi-lo)||1e-9))*100; k.push(val); }
+  const dline = SMA(k.map((v,i)=>({c:v})), d, x=>x.c); return {k, d:dline}; }
+function BBANDS(arr, p=20, mult=2){ const sma=SMA(arr,p); const outU=[], outL=[];
+  for(let i=0;i<arr.length;i++){ if(i<p-1){ outU.push(NaN); outL.push(NaN); continue; }
+    let mean=sma[i], s2=0; for(let j=i-p+1;j<=i;j++){ const d=arr[j].c-mean; s2+=d*d; }
+    const sd=Math.sqrt(s2/p); outU.push(mean+mult*sd); outL.push(mean-mult*sd); } return {upper:outU, lower:outL, basis:sma}; }
+function TR(a,b){return Math.max(a.h-a.l, Math.abs(a.h-b.c), Math.abs(a.l-b.c));}
+function ATR(arr,p=14){ const out=[NaN]; for(let i=1;i<arr.length;i++){ out.push(TR(arr[i],arr[i-1])); } return EMA(out, p); }
+function ADX(arr,p=14){ const dmPos=[NaN], dmNeg=[NaN], trs=[NaN];
+  for(let i=1;i<arr.length;i++){ const up = arr[i].h - arr[i-1].h, dn = arr[i-1].l - arr[i].l;
+    dmPos.push(up>dn && up>0 ? up:0); dmNeg.push(dn>up && dn>0 ? dn:0); trs.push(TR(arr[i],arr[i-1])); }
+  const smDMp=EMA(dmPos,p), smDMn=EMA(dmNeg,p), smTR=EMA(trs,p);
+  const dip = smDMp.map((v,i)=>100*((v||0)/((smTR[i]||1e-9)))); const din = smDMn.map((v,i)=>100*((v||0)/((smTR[i]||1e-9))));
+  const dx = dip.map((v,i)=>100*(Math.abs((v - din[i]))/((v + din[i])||1e-9))); const adx = EMA(dx,p);
+  return {dip, din, adx}; }
+function CCI(arr,p=20){ const tp = arr.map(x=>(x.h+x.l+x.c)/3); const sma=SMA(tp.map((c)=>({c})),p,x=>x.c);
+  const out=[]; for(let i=0;i<arr.length;i++){ if(i<p-1){ out.push(NaN); continue; }
+    let md=0; for(let j=i-p+1;j<=i;j++){ md+=Math.abs(tp[j]-sma[i]); } md/=p; out.push((tp[i]-sma[i])/((0.015*md)||1e-9)); } return out; }
+function WILLR(arr,p=14){ const out=[];
+  for(let i=0;i<arr.length;i++){ if(i<p-1){ out.push(NaN); continue; }
+    let hi=-Infinity, lo=+Infinity; for(let j=i-p+1;j<=i;j++){ hi=Math.max(hi,arr[j].h); lo=Math.min(lo,arr[j].l); }
+    out.push(-100*((hi-arr[i].c)/((hi-lo)||1e-9))); } return out; }
+function ROC(arr,p=10){ const out=[]; for(let i=0;i<arr.length;i++){ if(i<p){ out.push(NaN); continue; } out.push(((arr[i].c - arr[i-p].c)/((arr[i-p].c)||1e-9))*100); } return out; }
+function AROON(arr,p=14){ const up=[], down=[];
+  for(let i=0;i<arr.length;i++){ if(i<p-1){ up.push(NaN); down.push(NaN); continue; }
+    let hi=-Infinity, hiIdx=i, lo=+Infinity, loIdx=i;
+    for(let j=i-p+1;j<=i;j++){ if(arr[j].h>hi){hi=arr[j].h; hiIdx=j;} if(arr[j].l<lo){lo=arr[j].l; loIdx=j;} }
+    up.push(100*((p-(i-hiIdx))/p)); down.push(100*((p-(i-loIdx))/p)); } return {up, down}; }
+function PSAR(arr, afStep=0.02, afMax=0.2){ const out=[NaN]; let isUp=true; let af=afStep; let ep=arr[0].h; let sar=arr[0].l;
+  for(let i=1;i<arr.length;i++){ sar = sar + af * (ep - sar);
+    if(isUp){ if(arr[i].l < sar){ isUp=false; sar=ep; ep=arr[i].l; af=afStep; } else { if(arr[i].h > ep){ ep=arr[i].h; af=Math.min(af+afStep, afMax); } } }
+    else { if(arr[i].h > sar){ isUp=true; sar=ep; ep=arr[i].h; af=afStep; } else { if(arr[i].l < ep){ ep=arr[i].l; af=Math.min(af+afStep, afMax); } } }
+    out.push(sar); } return out; }
+function isBull(b){return b.c>b.o;} function isBear(b){return b.c<b.o;}
+function body(b){return Math.abs(b.c-b.o);} function upperWick(b){return b.h - Math.max(b.c,b.o);} function lowerWick(b){return Math.min(b.c,b.o)-b.l;}
+function engulfing(prev,cur){ return (isBull(cur)&&isBear(prev)&&cur.c>prev.o&&cur.o<prev.c) || (isBear(cur)&&isBull(prev)&&cur.o>prev.c&&cur.c<prev.o); }
+function hammer(b){ const bw=body(b), lw=lowerWick(b), uw=upperWick(b); return lw>bw*2 && uw<bw; }
+function shootingStar(b){ const bw=body(b), lw=lowerWick(b), uw=upperWick(b); return uw>bw*2 && lw<bw; }
+function doji(b){ return body(b) <= (b.h-b.l)*0.1; }
+
+function scoreSignals(arr){
+  const N=arr.length; if(N<40) return {score:0, dir:'محايد', conf:0};
+  const rsi = RSI(arr,14); const mac = MACD(arr,12,26,9);
+  const st = STOK(arr,14,3); const bb = BBANDS(arr,20,2); const atr = ATR(arr,14); const adx = ADX(arr,14);
+  const cci = CCI(arr,20); const wr = WILLR(arr,14); const roc = ROC(arr,10); const aroon = AROON(arr,14); const psar = PSAR(arr);
+  const sma5=SMA(arr,5), sma10=SMA(arr,10), sma20=SMA(arr,20), sma50=SMA(arr,50), sma100=SMA(arr,100), sma200=SMA(arr,200);
+  const ema9=EMA(arr,9), ema21=EMA(arr,21), ema26=EMA(arr,26), ema50=EMA(arr,50), ema100=EMA(arr,100);
+  const i=N-1, c=arr[i].c;
+  const votes=[], v=(x)=>votes.push(x);
+
+  v(c>sma5[i]?+1:-1); v(c>sma10[i]?+1:-1); v(c>sma20[i]?+1:-1); v(c>sma50[i]?+1:-1);
+  v(c>ema9[i]?+1:-1); v(c>ema21[i]?+1:-1); v(c>ema50[i]?+1:-1);
+  v(sma20[i]>sma50[i]?+1:-1); v(ema26[i]? ((ema26[i]<ema50[i])? -1:+1) : 0);
+  v(sma50[i]>sma100[i]?+1:-1); v(ema50[i]>ema100[i]?+1:-1); v(sma100[i]>sma200[i]?+1:-1);
+  v(mac.hist[i]>0?+1:-1); v(rsi[i]>50?+1:-1); v(st.k[i]>st.d[i]?+1:-1);
+  if(rsi[i]<30) v(+1); else if(rsi[i]>70) v(-1);
+  if(st.k[i]<20) v(+1); else if(st.k[i]>80) v(-1);
+  if(c>bb.upper[i]) v(-1); else if(c<bb.lower[i]) v(+1);
+  if(adx.adx[i]>20){ v(+1); v(adx.dip[i]>adx.din[i]?+1:-1); }
+  v(cci[i]>0?+1:-1); v(wr[i]>-50?+1:-1); v(roc[i]>0?+1:-1);
+  v(aroon.up[i]>aroon.down[i]?+1:-1);
+  if(atr[i]>atr[i-5]) v( (c>arr[i-1].c)? +1 : -1 );
+  v( (isNaN(psar[i-1])||psar[i-1]<arr[i-1].c) && psar[i]>c ? -1 : (psar[i]<c ? +1 : 0) );
+  const b0=arr[i], b1=arr[i-1]; if(engulfing(b1,b0)) v( isBull(b0)? +1:-1 ); if(hammer(b0)) v(+1); if(shootingStar(b0)) v(-1); if(doji(b0)) v(0);
+
+  const sum = votes.reduce((a,x)=>a+x,0);
+  let dir = sum>0?'شراء':(sum<0?'بيع':'محايد');
+  const conf = Math.min(100, Math.round( (Math.abs(sum)/votes.length)*100 ));
+  return {score:sum, dir, conf};
+}
+
+/* ===== OTC اصطناعي ===== */
+function seedFrom(str){ let h=2166136261>>>0; for(let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h>>>0; }
+function makePRNG(seed){ let x=seed||123456789; return function(){ x ^= x<<13; x ^= x>>>17; x ^= x<<5; return (x>>>0)/4294967296; }; }
+function synthSeries(symbol, len=500){
+  const seed = seedFrom(symbol + new Date().toISOString().slice(0,10));
+  const rnd = makePRNG(seed);
+  let base = 1 + (seed % 300)/100; // 1.00 - 4.00
+  if(/JPY/.test(symbol)) base = 100 + (seed%50); if(/BTC|XAU/.test(symbol)) base = 1000 + (seed%500);
+  const arr=[]; let c=base;
+  for(let i=0;i<len;i++){
+    const t = Date.now() - (len-i)*60000;
+    const drift = Math.sin(i/30)*0.06 + Math.cos(i/53)*0.04;
+    const step = (rnd()-0.5)*0.15 + drift;
+    const o=c; c = Math.max(0.0001, c*(1+step/100)); const h=Math.max(o,c)*(1+ (rnd()*0.08)); const l=Math.min(o,c)*(1- (rnd()*0.08));
+    arr.push({t,o,h,l,c,v: 1000 + Math.floor(rnd()*200)});
+  }
+  return arr;
+}
+
+/* ===== كاش + حماية الرصيد ===== */
+function cacheGet(k){ try{ const o=JSON.parse(localStorage.getItem(k)||'null'); if(o && Date.now()-o.t < CACHE_TTL_MS) return o.d; }catch(e){} return null; }
+function cacheSet(k,d){ try{ localStorage.setItem(k, JSON.stringify({t:Date.now(), d})); }catch(e){} }
+
+async function fetchSeriesReal(symbol, interval='1min', size=200){
+  const key = `td_${symbol}_${interval}`;
+  const cached = cacheGet(key); if(cached) return cached;
+  // rate-limit بسيط
+  const now = Date.now();
+  if(now - lastFetchTs < MIN_FETCH_GAP_MS){
+    const wait = MIN_FETCH_GAP_MS - (now - lastFetchTs);
+    await new Promise(r=>setTimeout(r, wait));
+  }
+  if(inflight.has(key)){
+    return await inflight.get(key);
+  }
+  const url = `${TD_BASE}/time_series?symbol=${encodeURIComponent(symbol)}&interval=${interval}&outputsize=${size}&apikey=${TWELVE_KEY}`;
+  const p = (async()=>{
+    try{
+      lastFetchTs = Date.now();
+      const r = await fetch(url);
+      const j = await r.json();
+      if(j && j.values){ const arr=parseSeries(j.values); cacheSet(key, arr); return arr; }
+      if(j && j.status==='error') throw new Error(j.message || 'API error');
+      throw new Error('No data');
+    } finally {
+      inflight.delete(key);
+    }
+  })();
+  inflight.set(key, p);
+  return await p;
+}
+
+/* ===== تنسيق السعر ===== */
+function fmtPrice(pair, p){
+  if(/JPY\b/.test(pair)) return p.toFixed(3);
+  if(/\bBTC\b/.test(pair)) return p.toFixed(2);
+  if(/\bXAU\b/.test(pair)) return p.toFixed(2);
+  if(p>=100) return p.toFixed(2);
+  if(p>=1) return p.toFixed(4);
+  return p.toFixed(6);
+}
+
+/* ===== التوقيتات والعدادات ===== */
+let tradeTimerIv=null;
+function riyadhNow(){ return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Riyadh'})); }
+function roundUpToM(date, m){
+  const d = new Date(date.getTime()); const mm=d.getMinutes(); const next = Math.ceil(mm/m)*m; if(next===60){ d.setHours(d.getHours()+1); d.setMinutes(0); } else d.setMinutes(next);
+  d.setSeconds(0); d.setMilliseconds(0); return d;
+}
+function startTradeCountdown(entry, durMin){
+  clearInterval(tradeTimerIv);
+  const tradeBox = document.getElementById('tradeBox');
+  function tick(){
+    const now = riyadhNow();
+    if(now < entry){
+      const diff = entry - now;
+      const m=Math.floor(diff/60000), s=Math.floor((diff%60000)/1000);
+      tradeBox.textContent = `🎯 الدخول بعد: ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    } else {
+      const end = new Date(entry.getTime() + durMin*60000);
+      const diff = end - now;
+      if(diff<=0){ tradeBox.textContent = '✅ انتهت الصفقة'; clearInterval(tradeTimerIv); return; }
+      const m=Math.floor(diff/60000), s=Math.floor((diff%60000)/1000);
+      tradeBox.textContent = `⏱️ الانتهاء بعد: ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+  }
+  tick(); tradeTimerIv = setInterval(tick, 1000);
+}
+
+let dayIv=null;
+function startDayCountdown(){
+  clearInterval(dayIv);
+  const dayBox = document.getElementById('dayBox');
+  function tick(){
+    const now = riyadhNow();
+    const end = new Date(now); end.setHours(23,59,59,999);
+    const diff=end-now; const h=Math.floor(diff/3600000), m=Math.floor((diff%3600000)/60000), s=Math.floor((diff%60000)/1000);
+    dayBox.textContent = `🗓️ اليوم: ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+  tick(); dayIv=setInterval(tick,1000);
+}
+
+/* ===== كول داون بين الصفقات ===== */
+function cooldownFor(tf){ return tf==1?3 : tf==5?5 : 0; } // دقائق
+function checkCooldown(pair, tf){
+  const key = `lt_${pair}_${tf}`;
+  const last = Number(localStorage.getItem(key)||0);
+  const cd = cooldownFor(tf) * 60000;
+  const now = Date.now();
+  const remain = last + cd - now;
+  return {ok: remain<=0, remainMs: Math.max(0, remain), key};
+}
+
+/* ===== تحليل حسب OTC/Real + 1/5/15 ===== */
+async function analyze(){
+  const sel = document.getElementById('pairSelect'); const pr = sel.value; const opt = sel.options[sel.selectedIndex];
+  if(!pr){ alert('اختر زوجاً أولاً'); return; }
+  const duration = parseInt(document.getElementById('tfSelect').value, 10);
+
+  // كول داون
+  const cd = checkCooldown(pr, duration);
+  if(!cd.ok){
+    const m=Math.floor(cd.remainMs/60000), s=Math.floor((cd.remainMs%60000)/1000);
+    const res = document.getElementById('result'); res.className='status-box bad';
+    res.textContent = `⛔ يجب الانتظار ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')} قبل إصدار صفقة جديدة لهذه الزوج/الزمنية.`;
+    errorFx(); return;
+  }
+
+  showLoading(true);
+  try{
+    const isOTC = (opt && opt.dataset && opt.dataset.otc === '1');
+    let series;
+    if(isOTC){
+      series = synthSeries(pr, 500);
+    } else {
+      series = await fetchSeriesReal(pr, '1min', 200);
+    }
+    // تحليل
+    let {dir, conf} = scoreSignals(series);
+    // OTC يعطي إشارة دائمًا إن كانت محايدة
+    if(isOTC && dir==='محايد'){
+      const last=series[series.length-1]; dir = last.c>=last.o ? 'شراء' : 'بيع'; conf = Math.max(conf, 55);
+    }
+    const entry = roundUpToM(riyadhNow(), duration);
+    startTradeCountdown(entry, duration);
+
+    const last = series[series.length-1];
+    const entryPrice = last ? fmtPrice(pr, last.c) : '—';
+
+    const ft = new Intl.DateTimeFormat('ar-EG', { hour:'2-digit', minute:'2-digit', hour12:false, timeZone:'Asia/Riyadh' });
+    const fd = new Intl.DateTimeFormat('ar-EG', { year:'numeric', month:'numeric', day:'numeric', timeZone:'Asia/Riyadh' });
+    const ico = dir==='شراء'?'🟩':'🟥';
+    const signal =
+`${pr}
+🕘 مدة الصفقة ${duration} دقيقة
+⏺️ دخول عند ${ft.format(entry)}
+${ico} ${dir}
+
+💵 سعر الدخول: ${entryPrice}
+
+✅ قوة الإشارة: ${conf}%
+📅 ${fd.format(riyadhNow())} 🇸🇦`;
+    const res = document.getElementById('result'); res.className='status-box ok'; res.textContent = signal; successFx();
+
+    // حفظ وقت الصفقة لفرض الكول داون
+    localStorage.setItem(cd.key, String(Date.now()));
+  }catch(e){
+    const res = document.getElementById('result');
+    let msg = String(e); if(/run out of api credits/i.test(msg)) msg = 'نفدت أرصدة TwelveData لهذا اليوم.';
+    res.className='status-box bad'; res.textContent = msg; errorFx();
+  }finally{ showLoading(false); }
+}
+
+/* ===== واجهة بعد الدخول + العداد ===== */
+let expireTimer = null;
+function showMain(expireTs){
+  document.getElementById("passwordBox").style.display="none";
+  document.getElementById("mainContainer").style.display="block";
+  document.getElementById("signalsCard").style.display="block";
+  startDayCountdown();
+  const expireBox = document.getElementById("expireBox");
+  clearInterval(expireTimer);
+  if(!expireTs){ expireBox.textContent = '🔓 غير مقيّد بوقت'; return; }
+  const expNorm = normalizeExpiryTs(expireTs);
+  function tick(){
+    const diff=(expNorm*1000)-Date.now();
+    if(diff<=0){ clearInterval(expireTimer); expireBox.className='chip'; expireBox.textContent='⛔ انتهت صلاحية السيريال.'; localStorage.removeItem('naif_active'); return; }
+    const h=Math.floor(diff/3600000), m=Math.floor((diff%3600000)/60000), s=Math.floor((diff%60000)/1000);
+    expireBox.textContent=`⏳ المدة المتبقية: ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+  tick(); expireTimer = setInterval(tick,1000);
+}
+
+/* ===== خلفية الشموع + الساعة + منع أدوات المطور ===== */
+const canvas=document.getElementById('candlesCanvas'), ctx=canvas.getContext('2d'); let W=0,H=0;
+function resize(){ W=canvas.width=innerWidth; H=canvas.height=innerHeight; } addEventListener('resize',resize,{passive:true}); resize();
+const candles=[]; function spawn(){ const x=W+Math.random()*200, b=8+Math.random()*24, hi=b+(Math.random()*26), lo=b+(Math.random()*26), o=Math.random()*H, c=o+(Math.random()>.5?b:-b);
+  candles.push({x, o, c, hi:Math.max(o,c)+Math.random()*hi, lo:Math.min(o,c)-Math.random()*lo, v:0.8+Math.random()*1.5, w:6+Math.random()*4, col:c>o?'rgba(80,255,170,0.55)':'rgba(255,120,120,0.55)'}); }
+for(let i=0;i<70;i++) spawn();
+function loop(){ ctx.clearRect(0,0,W,H);
+  for(let i=candles.length-1;i>=0;i--){ const k=candles[i]; k.x-=k.v; ctx.strokeStyle=k.col; ctx.lineWidth=1.25; ctx.beginPath(); ctx.moveTo(k.x,k.hi); ctx.lineTo(k.x,k.lo); ctx.stroke();
+    const x=k.x-k.w/2,y=Math.min(k.o,k.c),h=Math.abs(k.c-k.o); ctx.fillStyle=k.col; ctx.fillRect(x,y,k.w,Math.max(3,h)); if(k.x<-40){ candles.splice(i,1); spawn(); } }
+  requestAnimationFrame(loop); } loop();
+function tickClock(){ const d=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Riyadh'}));
+  const hh=String(d.getHours()).padStart(2,'0'), mm=String(d.getMinutes()).padStart(2,'0'), ss=String(d.getSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent=`${hh}:${mm}:${ss}`; } setInterval(tickClock,1000); tickClock();
+document.addEventListener('contextmenu', e=>e.preventDefault());
+document.addEventListener('keydown', e=>{
+  if(e.keyCode===123 || (e.ctrlKey&&e.shiftKey&&['I','J','C'].includes(e.key.toUpperCase())) || (e.ctrlKey&&['U','S','P'].includes(e.key.toUpperCase())) ){
+    e.preventDefault(); alert('🚫 أدوات المطوّر معطلة.');
+  }
+});
+</script>
+</body>
+</html>
