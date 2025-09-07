@@ -155,7 +155,7 @@ function toggleMusic(){ musicOn?stopMusic():startMusic(); const b=document.getEl
 /* ====== أدوات عامة ====== */
 function showLoading(on){ document.getElementById('loadingOverlay').style.display = on?'flex':'none'; }
 function showMsg(html,c='ok'){ const box=document.getElementById('loginMsg'); box.style.display='block'; box.className='status-box '+c; box.innerHTML=html; }
-function setBtn(on){ const btn=document.getElementById('loginBtn'); if(!btn) return; btn.disabled=!on; btn.textContent = on?'تسجيل الدخول':'جاري التحقق…'; }
+function setBtn(on){ const btn=document.getElementById('loginBtn'); if(!btn) return; btn.disabled=!on; btn.textContent = on?'تسجيل الدخول':'جارِ التحقق…'; }
 async function sha256Str(s){ const enc=new TextEncoder().encode(s); const buf=await crypto.subtle.digest('SHA-256',enc); return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
 function asForm(d){ const p=new URLSearchParams(); Object.entries(d).forEach(([k,v])=>{ if(v!==undefined&&v!==null) p.append(k,String(v)); }); return p; }
 function looksHtml(t){ const s=(t||'').trim(); return s.startsWith('<')||s.includes('<!DOCTYPE html>')||s.includes('<html'); }
@@ -208,7 +208,6 @@ async function keyauthInitMulti(){
 async function keyauthLicense(sessionid, key){
   const payload={ type:'license', key, sessionid, name:APP.name, ownerid:APP.ownerid };
   let j = await apiPost(CURRENT_API_BASE, payload).catch(e=>{ throw e; });
-  /* لا نفرض HWID إلا لو السيرفر طلبه */
   if(!j.success && /hwid/i.test(j.message||'')){
     try{
       const hw=await sha256Str(navigator.userAgent+'|'+navigator.platform);
@@ -229,11 +228,11 @@ function logout(){ localStorage.removeItem('naif_active'); location.reload(); }
 /* ====== تطبيع انتهاء الصلاحية ====== */
 function normalizeExpiryTs(exp){
   if(!exp) return null; let n=Number(exp);
-  if(!isFinite(n)||n<=0) return null; /* ثواني */ if(n>1e12) n=Math.floor(n/1000); /* لو جاء متبقّي */ if(n<1e9) n=Math.floor(Date.now()/1000)+n;
+  if(!isFinite(n)||n<=0) return null; if(n>1e12) n=Math.floor(n/1000); if(n<1e9) n=Math.floor(Date.now()/1000)+n;
   return Math.floor(n);
 }
 
-/* ====== تسجيل الدخول مع إعادة المحاولة ====== */
+/* ====== تسجيل الدخول ====== */
 let authBusy=false;
 async function checkPassword(){
   if(authBusy) return;
@@ -269,7 +268,7 @@ async function checkPassword(){
   }finally{ authBusy=false; setBtn(true); showLoading(false); }
 }
 
-/* ====== مؤشرات وتحليل + OTC/Real ====== */
+/* ====== مؤشرات/تحليل ====== */
 function toNum(x){const n=Number(x);return isFinite(n)?n:0;}
 function parseSeries(values){ return values.map(v=>({t:new Date(v.datetime.replace(' ','T')+'Z').getTime(),o:toNum(v.open),h:toNum(v.high),l:toNum(v.low),c:toNum(v.close),v:toNum(v.volume)})).reverse(); }
 function SMA(a,p,sel=x=>x.c){const o=[];let s=0;for(let i=0;i<a.length;i++){s+=sel(a[i]);if(i>=p)s-=sel(a[i-p]);o.push(i>=p-1?(s/p):NaN);}return o;}
@@ -308,7 +307,7 @@ push(((isNaN(ps[i-1])||ps[i-1]<a[i-1].c)&&ps[i]>c)?-1:(ps[i]<c?1:0));
 const b0=a[i],b1=a[i-1];if(engulfing(b1,b0))push(isBull(b0)?1:-1);if(hammer(b0))push(1);if(shootingStar(b0))push(-1);if(doji(b0))push(0);
 const sum=v.reduce((x,y)=>x+y,0);let dir=sum>0?'شراء':(sum<0?'بيع':'محايد');const conf=Math.min(100,Math.round((Math.abs(sum)/v.length)*100));return{score:sum,dir,conf};}
 
-/* ====== OTC & TwelveData ====== */
+/* ====== OTC & TwelveData (للسوق الحقيقي اختيارياً) ====== */
 const REAL_SYMBOLS=new Set(['EUR/USD','GBP/USD','USD/JPY','USD/CHF','USD/CAD','AUD/USD','NZD/USD','EUR/GBP','GBP/JPY','EUR/JPY','XAU/USD','BTC/USD']);
 function seedFrom(str){let h=2166136261>>>0;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
 function makePRNG(seed){let x=seed||123456789;return function(){x^=x<<13;x^=x>>>17;x^=x<<5;return (x>>>0)/4294967296;};}
@@ -386,6 +385,216 @@ function loop(){ ctx.clearRect(0,0,W,H); for(let i=candles.length-1;i>=0;i--){ c
 function tickClock(){ const d=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Riyadh'})); const hh=String(d.getHours()).padStart(2,'0'), mm=String(d.getMinutes()).padStart(2,'0'), ss=String(d.getSeconds()).padStart(2,'0'); document.getElementById('clock').textContent=`${hh}:${mm}:${ss}`; } setInterval(tickClock,1000); tickClock();
 document.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('keydown',e=>{ if(e.keyCode===123||(e.ctrlKey&&e.shiftKey&&['I','J','C'].includes(e.key.toUpperCase()))||(e.ctrlKey&&['U','S','P'].includes(e.key.toUpperCase()))){ e.preventDefault(); alert('🚫 أدوات المطوّر معطلة.'); }});
+</script>
+
+<!-- ============ [A] استبدال سلسلة OTC بأن تكون حية إن توفّرت ============ -->
+<script>
+(function(){
+  const _synth = window.synthSeries;
+  window.synthSeries = function(symbol, len){
+    if (window.__live_override_series && Array.isArray(window.__live_override_series) && window.__live_override_series.length > 50){
+      return window.__live_override_series.slice(-Math.max(50, len||500));
+    }
+    return _synth ? _synth(symbol, len) : [];
+  };
+})();
+</script>
+
+<!-- ============ [B] عميل WebSocket للجسر + دمج مع analyze() ============ -->
+<script>
+const Bridge = (() => {
+  const S = {
+    url: (()=>{
+      try{
+        const h = (location.hash||'').slice(1);
+        const m = [...new URLSearchParams(h).entries()].reduce((o,[k,v])=>(o[k]=v,o),{});
+        if(m.bridge) return m.bridge.replace(/^http/,'ws');
+      }catch(e){}
+      return 'wss://naifbridge.loca.lt';
+    })(),
+    ws: null, alive: false, statusEl: null,
+    symbol: 'EURUSD_otc', tf: 60,
+    store: new Map(), ticks: new Map()
+  };
+  function ensureStatusEl(){
+    if(S.statusEl) return;
+    const chip = document.createElement('div');
+    chip.id = 'bridgeStatus'; chip.className = 'chip';
+    chip.style.position = 'fixed'; chip.style.right = '12px'; chip.style.top = '12px'; chip.style.zIndex = '9999';
+    chip.textContent = '🛰️ الجسر: غير متصل';
+    document.body.appendChild(chip); S.statusEl = chip;
+  }
+  function setStatus(txt, ok){
+    ensureStatusEl();
+    S.statusEl.textContent = '🛰️ ' + txt;
+    S.statusEl.style.borderColor = ok? 'rgba(56,239,125,.5)' : 'rgba(255,107,107,.5)';
+    S.statusEl.style.background = ok? 'rgba(56,239,125,.12)' : 'rgba(255,107,107,.12)';
+    try{ if(ok) successFx(); else errorFx(); }catch{}
+  }
+  function pushTick(sym, tsMs, price){
+    if(!S.ticks.has(sym)) S.ticks.set(sym, []);
+    const buf = S.ticks.get(sym);
+    buf.push({t:tsMs, p:price});
+    if(buf.length>5000) buf.splice(0, buf.length-5000);
+    aggregate(sym, 60);
+    aggregate(sym, S.tf);
+  }
+  function ensureStore(sym, tf){
+    const key = sym+'@'+tf;
+    if(!S.store.has(key)) S.store.set(key, []);
+    return S.store.get(key);
+  }
+  function aggregate(sym, tf){
+    if(!S.ticks.has(sym)) return;
+    const ticks = S.ticks.get(sym); if(!ticks.length) return;
+    const arr = ensureStore(sym, tf);
+    const bucket = (t)=>(Math.floor(t/1000/tf)*tf*1000);
+    const byBucket = new Map();
+    for(const x of ticks){
+      const b = bucket(x.t);
+      let o = byBucket.get(b);
+      if(!o){ o = {t:b,o:x.p,h:x.p,l:x.p,c:x.p,v:0}; byBucket.set(b,o); }
+      if(x.p>o.h) o.h=x.p;
+      if(x.p<o.l) o.l=x.p;
+      o.c=x.p; o.v++;
+    }
+    const keys = [...byBucket.keys()].sort((a,b)=>a-b);
+    for(const k of keys){
+      const c = byBucket.get(k);
+      const L = arr[arr.length-1];
+      if(!L || k > L.t){ arr.push(c); }
+      else if(k === L.t){
+        L.h=Math.max(L.h,c.h); L.l=Math.min(L.l,c.l); L.c=c.c; L.v=(L.v||0)+(c.v||0);
+      }
+    }
+    while(arr.length>1000) arr.shift();
+  }
+  function tryParseRawLine(s){
+    let m = s.match(/updateStream:\s*(\[[^\]]+\])/);
+    if(m){
+      try{
+        const arr = JSON.parse(m[1]);
+        arr.forEach(item=>{
+          const sym = item[0];
+          const ts = Math.floor(Number(item[1])*1000);
+          const price = Number(item[2]);
+          if(sym && isFinite(ts) && isFinite(price)) pushTick(sym, ts, price);
+        });
+        return true;
+      }catch(e){}
+    }
+    m = s.match(/updateHistoryNewFast:\s*(\{.*?\})/);
+    if(m){
+      try{
+        const obj = JSON.parse(m[1]);
+        const sym = obj.asset, tf = Number(obj.period||60);
+        const hist = Array.isArray(obj.history)? obj.history : [];
+        hist.forEach(row=>{
+          const ts = Math.floor(Number(row[0])*1000);
+          const price = Number(row[1]);
+          if(sym && isFinite(ts) && isFinite(price)) pushTick(sym, ts, price);
+        });
+        return true;
+      }catch(e){}
+    }
+    return false;
+  }
+  function onMessage(ev){
+    let s = ev.data;
+    if(s instanceof ArrayBuffer) s = new TextDecoder().decode(s);
+    if(typeof s !== 'string') try{s=String(s)}catch{ s=''; }
+    try{
+      const j = JSON.parse(s);
+      if(j && j.type==='tick' && j.symbol && j.ts && j.price){ pushTick(j.symbol, j.ts, j.price); return; }
+      if(j && j.type==='candles' && j.symbol && j.tf && Array.isArray(j.candles)){
+        S.store.set(j.symbol+'@'+j.tf, j.candles); return;
+      }
+    }catch(_){}
+    tryParseRawLine(s);
+  }
+  function connect(){
+    try{ S.ws && S.ws.close(); }catch{}
+    setStatus('الاتصال بـ '+S.url+' …', false);
+    const ws = new WebSocket(S.url);
+    S.ws = ws;
+    let pingIv = null;
+    ws.onopen = ()=>{
+      S.alive = true;
+      setStatus('متصل', true);
+      ws.send(JSON.stringify({op:'hello', agent:'naif-web', ver:'1.0'}));
+      ws.send(JSON.stringify({op:'subscribe', symbol:S.symbol, tf:S.tf}));
+      pingIv = setInterval(()=>{ try{ ws.send('ping'); }catch{} }, 15000);
+    };
+    ws.onmessage = onMessage;
+    ws.onerror = ()=>{};
+    ws.onclose = ()=>{
+      if(pingIv) clearInterval(pingIv);
+      S.alive = false;
+      setStatus('مقطوع — إعادة محاولة قريبًا…', false);
+      setTimeout(connect, 2500);
+    };
+  }
+  function getSeries(sym, tf=S.tf){
+    const key = sym+'@'+tf;
+    const arr = S.store.get(key) || [];
+    return arr.slice().sort((a,b)=>a.t-b.t);
+  }
+  function setSymbol(sym, tf){
+    S.symbol = sym; S.tf = tf||S.tf;
+    try{ S.ws && S.ws.send(JSON.stringify({op:'subscribe', symbol:sym, tf:S.tf})); }catch{}
+  }
+  return { connect, getSeries, setSymbol, state:S };
+})();
+
+/* دمج الجسر مع عناصر الواجهة */
+(function integrateBridge(){
+  try{
+    Bridge.connect();
+    const selPair = document.getElementById('pairSelect');
+    const selTf = document.getElementById('tfSelect');
+    if(selPair && selTf){
+      selPair.addEventListener('change', ()=>{
+        const pr = selPair.value;
+        const tf = parseInt(selTf.value,10)||60;
+        const symOTC = pr.includes('_otc')? pr : (pr.replace('/','')+'_otc');
+        Bridge.setSymbol(symOTC, tf);
+      });
+      selTf.addEventListener('change', ()=>{
+        const pr = selPair.value;
+        const tf = parseInt(selTf.value,10)||60;
+        const symOTC = pr.includes('_otc')? pr : (pr.replace('/','')+'_otc');
+        Bridge.setSymbol(symOTC, tf);
+      });
+    }
+    const _analyze = window.analyze;
+    window.analyze = async function(){
+      const sel = document.getElementById('pairSelect');
+      const pr = sel && sel.value;
+      const tf = parseInt(document.getElementById('tfSelect').value,10)||5;
+      const isOtc = /OTC|_otc/i.test(sel.options[sel.selectedIndex]?.parentNode?.label||'') || /_otc$/.test(pr);
+      let usedLive = false;
+      if(isOtc && pr){
+        const symOTC = pr.includes('_otc')? pr : (pr.replace('/','')+'_otc');
+        const live60 = Bridge.getSeries(symOTC, 60);
+        if(live60 && live60.length>=80){
+          window.__live_override_series = live60.map(x=>({t:x.t,o:+x.o,h:+x.h,l:+x.l,c:+x.c,v:+x.v||0}));
+          usedLive = true;
+        }else{
+          window.__live_override_series = null;
+        }
+      }else{
+        window.__live_override_series = null;
+      }
+      await _analyze();
+      if(usedLive){
+        const r = document.getElementById('result');
+        if(r) r.textContent += '\n(✅ التحليل اعتمد على شموع حية من الجسر)';
+      }
+    };
+  }catch(e){
+    console.warn('bridge integration error', e);
+  }
+})();
 </script>
 </body>
 </html>
