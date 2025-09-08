@@ -2710,5 +2710,53 @@ if(!wasReady && nowReady){
 })();
 </script>
 
+
+<!-- ===== Hard Override: Disable all filter-based rejections & messages ===== -->
+<script>
+(function(){
+  const SAFE_TRUE = function(){ return true; };
+  const SAFE_NOOP  = function(){};
+  function softSet(obj,k,v){ try{ if(obj && typeof obj==='object'){ obj[k]=v; } }catch(e){} }
+  window.__NAIF_DISABLE_FILTERS = true;
+
+  // 1) Override known filter functions if present
+  window.__NAIF_filters = window.__NAIF_filters || {};
+  ['htfAgree','confidenceOK','shouldReject','reject','allowedByFilters','filtersOK'].forEach(function(k){
+    if (typeof window.__NAIF_filters[k] === 'function') { softSet(window.__NAIF_filters, k, SAFE_TRUE); }
+  });
+
+  // 2) Override global gates if defined
+  ['canFire','allowedByFilters','filtersOK','rejectSignal','shouldReject'].forEach(function(k){
+    if (typeof window[k] === 'function') { window[k] = SAFE_TRUE; }
+  });
+
+  // 3) Mute any toast/alert with "فلتر" / "HTF" / "رفض"
+  var killRe = /(فلتر|رفض|HTF|mismatch)/i;
+  function silence(msg){ return typeof msg === 'string' && killRe.test(msg); }
+  [['alert', window], ['showToast', window], ['toast', window], ['showNote', window], ['warn', console], ['info', console], ['log', console]].forEach(function(pair){
+    var key = pair[0], obj = pair[1];
+    if (!obj) return;
+    var orig = obj[key];
+    if (typeof orig === 'function'){
+      obj[key] = function(){ if (silence(arguments[0])) return; return orig.apply(this, arguments); };
+    }
+  });
+
+  // 4) Remove any existing DOM messages that contain those words
+  function hideMatches(){
+    try{
+      document.querySelectorAll('div,span,p,li').forEach(function(el){
+        if (el && el.childElementCount === 0 && el.textContent && killRe.test(el.textContent)){
+          el.remove();
+        }
+      });
+    }catch(_){}
+  }
+  new MutationObserver(function(){ hideMatches(); }).observe(document.documentElement, {childList:true, subtree:true});
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hideMatches);
+  else hideMatches();
+})();
+</script>
+
 </body>
 </html>
