@@ -599,132 +599,114 @@ document.getElementById('market-switch').addEventListener('click',e=>{const b=e.
 selPair.addEventListener('change',()=>{updateAssetDecor(currentSymbol()); sendPair(true);});
 document.querySelectorAll('#tf-options .time-btn').forEach(btn=>{btn.addEventListener('click',()=>{btn.parentElement.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('selected')); btn.classList.add('selected');});});
 
-/* ===== زر توليد إشارة مع كوول-داون خاص ===== */
+
+/* ===== زر توليد إشارة مع كوول-داون خاص (مُصلَّح) ===== */
 const genBtn=document.getElementById('generate-btn');
 const signalModal=document.getElementById('signal-modal');
 const closeSignal=document.getElementById('close-signal');
+
+// تبريد: لكل إطار زمني، تذكّر آخر وقت صفقة
 const cooldownMap=new Map(); // key: tf minutes -> last timestamp
+
 function canFire(tfMin){
   const now=Date.now();
-  const last=cooldownMap.get(tf)||0;
+  const last=cooldownMap.get(tfMin)||0;
   let gap=0;
-  if(tf===1) gap=3*60000;        // 3 دقائق
-  else if(tf===5) gap=5*60000;   // 5 دقائق
-  else gap=0;                    // "الباقي نفسها" = بدون تغيير
+  if(tfMin===1) gap=3*60000;      // 3 دقائق بعد صفقة الدقيقة
+  else if(tfMin===5) gap=5*60000; // 5 دقائق بعد صفقة 5 دقائق
+  else gap=0;
   return {ok: now-last>=gap, remain: Math.max(0, gap-(now-last))};
 }
 
-function openSignal(dir, conf, entry, sym, tf){
-  function tfToMin(x){
-    if (x === undefined || x === null) return 1;
-    var n = Number(x);
-    if (Number.isFinite(n) && n > 0) return Math.floor(n);
-    if (typeof x === 'string'){
-      var m = x.match(/\d+/);
-      if (m) return Math.max(1, parseInt(m[0],10));
-    }
-    if (window.__TF && Number.isFinite(Number(window.__TF.min))) return Math.max(1, parseInt(window.__TF.min,10));
-    return 1;
-  }
-  var tfMin = tfToMin(tf);
-
-  var byId = function(id){ return document.getElementById(id); };
-  var sd = byId('signal-direction');
-  if (sd){
-    sd.textContent = dir;
-    sd.className = 'signal-dir ' + (/شراء|BUY/.test(dir)?'signal-good':/بيع|SELL/.test(dir)?'signal-bad':'signal-neutral');
-  }
-  if(byId('res-pair')) byId('res-pair').textContent = sym || '—';
-  if(byId('res-tf'))   byId('res-tf').textContent   = String(tfMin) + 'm';
-  if(byId('res-conf')) byId('res-conf').textContent = String(conf) + '%';
-  if(byId('res-entry')){
-    var ts = (entry && entry.toLocaleTimeString) ? entry.toLocaleTimeString(CUR_LANG==='ar'?'ar-SA':'en-US') : '—';
-    byId('res-entry').textContent = ts;
-  }
-
-  var cd = byId('cooldown-note');
-  if(cd){
-    var mins = Math.max(1, parseInt(tfMin,10));
-    cd.textContent = (CUR_LANG==='ar')
-      ? ('يجب الانتظار ' + mins + ' دقيقة قبل الصفقة التالية لهذا الإطار.')
-      : ('You must wait ' + mins + ' minute(s) before the next trade on this timeframe.');
-  }
-
+function naifFormatPrice(val){
   try{
-    if (typeof signalModal !== 'undefined' && signalModal && signalModal.style) {
-      signalModal.style.display='flex';
-    }
-  }catch(_){}
+    const sym = currentSymbol();
+    if(!isFinite(val)) return '—';
+    return (/JPY\b/.test(sym)? val.toFixed(3) : (val>=100? val.toFixed(2) : val.toFixed(5)));
+  }catch(_){ return '—'; }
+}
 
-  try{
-    if (typeof window.__NAIF_startEntryCountdown === 'function'){
-      window.__NAIF_startEntryCountdown(entry.getTime());
-    }
-  }catch(_){}
+function openSignal(dir, conf, entry, sym, tfMin){
+  const sd=document.getElementById('signal-direction');
+  sd.textContent = dir;
+  sd.className='signal-dir '+(/شراء|BUY/.test(dir)?'signal-good':/بيع|SELL/.test(dir)?'signal-bad':'signal-neutral');
+  document.getElementById('res-pair').textContent=sym;
+  document.getElementById('res-tf').textContent=tfMin+'m';
+  document.getElementById('res-conf').textContent=conf+'%';
+  document.getElementById('res-entry').textContent=entry.toLocaleTimeString(CUR_LANG==='ar'?'ar-SA':'en-US');
 
+  // سعر الدخول/الخروج مبدئيًا
   try{
-    var endTs = entry.getTime() + tfMin*60*1000;
-    if (typeof window.__NAIF_startExpiryCountdown === 'function') {
-      window.__NAIF_startExpiryCountdown(endTs);
-    }
-  }catch(_){}
-
-  try{
-    var priceEl = byId('res-price');
-    var exitEl  = byId('res-exit');
-    var pnlEl   = byId('res-pnl');
+    const priceEl = document.getElementById('res-price');
+    const exitEl  = document.getElementById('res-exit');
     if(exitEl) exitEl.textContent = '—';
-    if(pnlEl){ pnlEl.textContent = '—'; pnlEl.style.color='inherit'; }
-    if (typeof window.__NAIF_getEntryPrice === 'function' && priceEl){
-      var ep = window.__NAIF_getEntryPrice(sym, tfMin);
-      if (typeof window.naifFormatPrice === 'function') priceEl.textContent = window.naifFormatPrice(ep);
-      else priceEl.textContent = String(ep);
-      window.__NAIF_last_entryPrice = ep;
-    }
+
+    // حاول أخذ آخر سعر من شموع الخادم
+    const last = (window.srvCandles?.get(sym)||[]).slice(-1)[0];
+    const ep = last ? last.c : NaN;
+    if(priceEl) priceEl.textContent = naifFormatPrice(ep);
+    window.__NAIF_last_entryPrice = ep;
     window.__NAIF_last_sym = sym;
     window.__NAIF_last_tf  = tfMin;
   }catch(_){}
-}
-const ep = window.__NAIF_getEntryPrice(sym, tf);
-    if(priceEl){ priceEl.textContent = window.naifFormatPrice(ep); }
-    window.__NAIF_last_entryPrice = ep;
-    window.__NAIF_last_sym = sym;
-    window.__NAIF_last_tf  = tf;
-  }catch(_){}
-}
-  }catch(_){}
-}
-    const __endTs = entry.getTime() + (Number(tf)||1)*60*1000;
-    if (typeof window.__NAIF_startExpiryCountdown === 'function') {
-      window.__NAIF_startExpiryCountdown(__endTs);
-    }
-  }catch(_){}
-}
-closeSignal.addEventListener('click',()=>{signalModal.style.display='none';});
 
-genBtn.addEventListener('click',()=>{
-  const __TF = __NAIF_getTF(); const tfVal=__TF.v, tfUnit=__TF.u, tfMs=__TF.ms, tfMin=__TF.minutes;
-  const {ok, remain} = canFire(tfMin);
-  if(!ok){
-    errorFx();
-    const m = Math.ceil(remain/60000);
-    alert(CUR_LANG==='ar' ? `يجب الانتظار ${m} دقيقة قبل الصفقة التالية لهذا الإطار.` : `Please wait ${m} minute(s) before next trade for this timeframe.`);
-    return;
+  const cd=document.getElementById('cooldown-note');
+  if(cd){
+    cd.textContent = (tfMin===1 ? I18N[CUR_LANG].cooldown1 : tfMin===5 ? I18N[CUR_LANG].cooldown5 : '');
   }
-  const sym=currentSymbol();
-  const series=mergeWithSrv(sym, tfMin, 160);
-  if(series.length<40){ errorFx(); alert(I18N[CUR_LANG].notEnough); return; }
-  const {dir,conf}=scoreAll(series);
-  const now=riyadhNow(); now.setSeconds(0); now.setMilliseconds(0); const entry=new Date(now.getTime()+tfMin*60000);
-  openSignal(dir, conf, entry, sym, tfMin);
-  successFx();
-  cooldownMap.set(tfMin, Date.now());
 
-  // counter (starts from zero each load as requested)
-  const cntEl=document.getElementById('signal-count');
-  const n=(parseInt(cntEl.textContent||'0',10)||0)+1;
-  cntEl.textContent=n;
+  signalModal.style.display='flex';
+
+  // عدّاد الوقت حتى الدخول/الانتهاء (اختياري إذا كانت دوال العدّادات موجودة)
+  try{
+    if (typeof window.__NAIF_startEntryCountdown === 'function') window.__NAIF_startEntryCountdown(entry.getTime());
+    const endTs = entry.getTime() + (Number(tfMin)||1)*60*1000;
+    if (typeof window.__NAIF_startExpiryCountdown === 'function') window.__NAIF_startExpiryCountdown(endTs);
+  }catch(_){}
+}
+
+closeSignal?.addEventListener('click',()=>{ signalModal.style.display='none'; });
+
+genBtn?.addEventListener('click',()=>{
+  try{
+    const TF=__NAIF_getTF(); const tfMin=TF.minutes;
+    const {ok,remain}=canFire(tfMin);
+    if(!ok){
+      errorFx?.();
+      const m=Math.ceil(remain/60000);
+      alert(CUR_LANG==='ar' ? `يجب الانتظار ${m} دقيقة قبل الصفقة التالية لهذا الإطار.`
+                            : `Please wait ${m} minute(s) before the next trade for this timeframe.`);
+      return;
+    }
+    const sym=currentSymbol();
+    const need=naifMinBarsByTF ? naifMinBarsByTF(tfMin) : 40;
+    const series=mergeWithSrv(sym, tfMin, Math.max(160, need+10));
+    if(!series || series.length<Math.max(40, need)){
+      errorFx?.();
+      alert(I18N?.[CUR_LANG]?.notEnough || 'Not enough data yet.');
+      return;
+    }
+    const {dir,conf}=scoreAll(series);
+    const now=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Riyadh'}));
+    now.setSeconds(0); now.setMilliseconds(0);
+    const entry=new Date(now.getTime()+tfMin*60000);
+
+    openSignal(dir, conf, entry, sym, tfMin);
+    successFx?.();
+    cooldownMap.set(tfMin, Date.now());
+
+    // عدّاد الإشارات
+    const cntEl=document.getElementById('signal-count');
+    if(cntEl){
+      const n=(parseInt(cntEl.textContent||'0',10)||0)+1;
+      cntEl.textContent=n;
+    }
+  }catch(e){
+    errorFx?.();
+    alert('Unexpected error: '+(e?.message||e));
+  }
 });
+
 
 /* ===== الترخيص (سيريال) ===== */
 // يبدأ عداد الإشارات من صفر (على كل تحميل)
@@ -878,7 +860,7 @@ const B=[]; function spawn(){const x=W+Math.random()*200,b=8+Math.random()*24,hi
         // Filters
         const trend = __NAIF_filters.trendOK(srs);
         const volOK = __NAIF_filters.volumeOK(srs);
-        const htf = __NAIF_filters.htfAgree(sym, tfMin);
+        const htf = true /* htfAgree disabled */;
 
         // Determine desired direction as +1 / -1
         const want = /شراء|BUY/.test(dir) ? 'up' : /بيع|SELL/.test(dir) ? 'dn' : null;
@@ -893,101 +875,7 @@ const B=[]; function spawn(){const x=W+Math.random()*200,b=8+Math.random()*24,hi
           if(!volOK) reasons.push(CUR_LANG==='ar'?'حجم ضعيف':'Low volume');
           if(!trendPass) reasons.push(CUR_LANG==='ar'?'اتجاه غير مناسب':'Trend mismatch');
           if(!htfPass) reasons.push(CUR_LANG==='ar'?'عدم توافق مع إطار أعلى':'No HTF agreement');
-          alert((CUR_LANG==='ar'?'فلتر رفض الإشارة: ':'Signal filtered: ')+reasons.join(' + '));
-          return;
-        }
-
-        // Passed filters -> open modal and success sound
-        const now = (function(){return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Riyadh'}));})();
-        now.setSeconds(0); now.setMilliseconds(0);
-        const __TF2 = __NAIF_getTF(); const entry = new Date(now.getTime()+__TF2.ms);
-        (
-function openSignal(dir, conf, entry, sym, tf){
-  function tfToMin(x){
-    if (x === undefined || x === null) return 1;
-    var n = Number(x);
-    if (Number.isFinite(n) && n > 0) return Math.floor(n);
-    if (typeof x === 'string'){
-      var m = x.match(/\d+/);
-      if (m) return Math.max(1, parseInt(m[0],10));
-    }
-    if (window.__TF && Number.isFinite(Number(window.__TF.min))) return Math.max(1, parseInt(window.__TF.min,10));
-    return 1;
-  }
-  var tfMin = tfToMin(tf);
-
-  var byId = function(id){ return document.getElementById(id); };
-  var sd = byId('signal-direction');
-  if (sd){
-    sd.textContent = dir;
-    sd.className = 'signal-dir ' + (/شراء|BUY/.test(dir)?'signal-good':/بيع|SELL/.test(dir)?'signal-bad':'signal-neutral');
-  }
-  if(byId('res-pair')) byId('res-pair').textContent = sym || '—';
-  if(byId('res-tf'))   byId('res-tf').textContent   = String(tfMin) + 'm';
-  if(byId('res-conf')) byId('res-conf').textContent = String(conf) + '%';
-  if(byId('res-entry')){
-    var ts = (entry && entry.toLocaleTimeString) ? entry.toLocaleTimeString(CUR_LANG==='ar'?'ar-SA':'en-US') : '—';
-    byId('res-entry').textContent = ts;
-  }
-
-  var cd = byId('cooldown-note');
-  if(cd){
-    var mins = Math.max(1, parseInt(tfMin,10));
-    cd.textContent = (CUR_LANG==='ar')
-      ? ('يجب الانتظار ' + mins + ' دقيقة قبل الصفقة التالية لهذا الإطار.')
-      : ('You must wait ' + mins + ' minute(s) before the next trade on this timeframe.');
-  }
-
-  try{
-    if (typeof signalModal !== 'undefined' && signalModal && signalModal.style) {
-      signalModal.style.display='flex';
-    }
-  }catch(_){}
-
-  try{
-    if (typeof window.__NAIF_startEntryCountdown === 'function'){
-      window.__NAIF_startEntryCountdown(entry.getTime());
-    }
-  }catch(_){}
-
-  try{
-    var endTs = entry.getTime() + tfMin*60*1000;
-    if (typeof window.__NAIF_startExpiryCountdown === 'function') {
-      window.__NAIF_startExpiryCountdown(endTs);
-    }
-  }catch(_){}
-
-  try{
-    var priceEl = byId('res-price');
-    var exitEl  = byId('res-exit');
-    var pnlEl   = byId('res-pnl');
-    if(exitEl) exitEl.textContent = '—';
-    if(pnlEl){ pnlEl.textContent = '—'; pnlEl.style.color='inherit'; }
-    if (typeof window.__NAIF_getEntryPrice === 'function' && priceEl){
-      var ep = window.__NAIF_getEntryPrice(sym, tfMin);
-      if (typeof window.naifFormatPrice === 'function') priceEl.textContent = window.naifFormatPrice(ep);
-      else priceEl.textContent = String(ep);
-      window.__NAIF_last_entryPrice = ep;
-    }
-    window.__NAIF_last_sym = sym;
-    window.__NAIF_last_tf  = tfMin;
-  }catch(_){}
-}
-)(dir, conf, entry, sym, tf);
-
-        successFx();
-        const cntEl=document.getElementById('signal-count');
-        const n=(parseInt(cntEl.textContent||'0',10)||0)+1; cntEl.textContent=n;
-
-      }catch(err){
-        console.error(err);
-        errorFx();
-        naifShowError(CUR_LANG==='ar'?'خطأ غير متوقع':'Unexpected', CUR_LANG==='ar'?'حدث خطأ غير متوقع.':'Unexpected error.');
-      }
-    }, {capture:false});
-  })();
-})();
-</script>
+          alert((CUR_LANG==='ar'?'تنبيه: تم تجاهل فلتر الإطار الأعلى حسب الإعداد.</script>
 
 
 <script>
@@ -1643,7 +1531,7 @@ document.addEventListener('DOMContentLoaded', function(){
       // Show cooldown message: wait 1 minute before next signal for this TF
       const cd = document.getElementById('cooldown-note');
       if(cd){
-        var mins = tfMin;
+        var mins = Math.max(1, parseInt(Number(tf)||1,10));
         cd.textContent = (function(){ if (CUR_LANG==='ar'){ return (tfUnit==='s' ? ('يجب الانتظار ' + (tfVal) + ' ثانية قبل الصفقة التالية لهذا الإطار.') : ('يجب الانتظار ' + mins + ' دقيقة قبل الصفقة التالية لهذا الإطار.')); } else { return (tfUnit==='s' ? ('You must wait ' + tfVal + ' second(s) before the next trade on this timeframe.') : ('You must wait ' + mins + ' minute(s) before the next trade on this timeframe.')); } })();
       }
 
@@ -2857,15 +2745,18 @@ if(!wasReady && nowReady){
   function softSet(obj,k,v){ try{ if(obj && typeof obj==='object'){ obj[k]=v; } }catch(e){} }
   window.__NAIF_DISABLE_FILTERS = true;
 
+  // 1) Override known filter functions if present
   window.__NAIF_filters = window.__NAIF_filters || {};
   ['htfAgree','confidenceOK','shouldReject','reject','allowedByFilters','filtersOK'].forEach(function(k){
     if (typeof window.__NAIF_filters[k] === 'function') { softSet(window.__NAIF_filters, k, SAFE_TRUE); }
   });
 
+  // 2) Override global gates if defined
   ['canFire','allowedByFilters','filtersOK','rejectSignal','shouldReject'].forEach(function(k){
     if (typeof window[k] === 'function') { window[k] = SAFE_TRUE; }
   });
 
+  // 3) Mute any toast/alert with "فلتر" / "HTF" / "رفض"
   var killRe = /(فلتر|رفض|HTF|mismatch)/i;
   function silence(msg){ return typeof msg === 'string' && killRe.test(msg); }
   [['alert', window], ['showToast', window], ['toast', window], ['showNote', window], ['warn', console], ['info', console], ['log', console]].forEach(function(pair){
@@ -2877,6 +2768,7 @@ if(!wasReady && nowReady){
     }
   });
 
+  // 4) Remove any existing DOM messages that contain those words
   function hideMatches(){
     try{
       document.querySelectorAll('div,span,p,li').forEach(function(el){
@@ -2892,162 +2784,5 @@ if(!wasReady && nowReady){
 })();
 </script>
 
-<script>
-(function(){
-  function fixCooldownNaN(){
-    try{
-      var cd = document.getElementById('cooldown-note');
-      if (!cd) return;
-      if (/NaN/.test(cd.textContent||'')){
-        var tf = window.__NAIF_last_tf || (window.__TF && window.__TF.min) || 1;
-        var mins = Math.max(1, parseInt(Number(tf)||1,10));
-        cd.textContent = (window.CUR_LANG==='ar')
-          ? ('يجب الانتظار ' + mins + ' دقيقة قبل الصفقة التالية لهذا الإطار.')
-          : ('You must wait ' + mins + ' minute(s) before the next trade on this timeframe.');
-      }
-    }catch(_){}
-  }
-  if (document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', fixCooldownNaN);
-  } else {
-    fixCooldownNaN();
-  }
-  try{
-    new MutationObserver(fixCooldownNaN).observe(document.body, {childList:true, subtree:true});
-  }catch(_){}
-})();
-</script>
-
 </body>
 </html>
-
-<!-- ===== Cross‑Device Generate Signal Booster ===== -->
-<script>
-(function(){
-  // 1) Ensure a safe TF context for all devices
-  window.__TF = window.__TF || { min: 1, ms: 60000, v: 1, u: 'm' };
-  if (!Number.isFinite(Number(__TF.min)) || Number(__TF.min) <= 0){
-    __TF.min = 1;
-    __TF.ms  = 60000;
-  }
-
-  // 2) Fallback modal if missing (keeps your design if it exists already)
-  (function ensureModal(){
-    if (typeof window.signalModal !== 'undefined' && window.signalModal) return;
-    var m = document.getElementById('signal-modal');
-    if (!m){
-      m = document.createElement('div');
-      m.id = 'signal-modal';
-      m.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:99999';
-      m.innerHTML = '<div style="background:#111;padding:18px 16px;border-radius:12px;min-width:280px;max-width:92vw;color:#fff;font-family:system-ui,Segoe UI,Arial">'
-        + '<div style="font-size:14px;opacity:.8;margin-bottom:6px">تم توليد الإشارة</div>'
-        + '<div style="display:grid;grid-template-columns:110px 1fr;gap:8px 12px;font-size:14px">'
-        + '<div>الزوج</div><div id="res-pair">—</div>'
-        + '<div>الفريم</div><div id="res-tf">—</div>'
-        + '<div>القوة</div><div id="res-conf">—</div>'
-        + '<div>وقت الدخول</div><div id="res-entry">—</div>'
-        + '<div>سعر الدخول</div><div id="res-price">—</div>'
-        + '<div>سعر الخروج</div><div id="res-exit">—</div>'
-        + '<div>النتيجة</div><div id="res-pnl">—</div>'
-        + '</div>'
-        + '<div id="cooldown-note" style="margin-top:10px;font-size:12px;opacity:.8"></div>'
-        + '<div style="margin-top:14px;text-align:end"><button id="res-close" style="background:#1f2937;color:#fff;border:0;border-radius:8px;padding:8px 12px">إغلاق</button></div>'
-        + '</div>';
-      document.body.appendChild(m);
-      var closeBtn = m.querySelector('#res-close');
-      if (closeBtn) closeBtn.addEventListener('click', function(){ m.style.display='none'; });
-    }
-    window.signalModal = m;
-  })();
-
-  // 3) Safe openSignal already patched in your file. If missing, define a minimal one.
-  if (typeof window.openSignal !== 'function'){
-    window.openSignal = function(dir, conf, entry, sym, tf){
-      var tfMin = Math.max(1, parseInt(Number(tf)||1,10));
-      var byId = function(id){ return document.getElementById(id); };
-      var m = window.signalModal || document.getElementById('signal-modal');
-      if (byId('res-pair')) byId('res-pair').textContent = sym || '—';
-      if (byId('res-tf')) byId('res-tf').textContent = String(tfMin)+'m';
-      if (byId('res-conf')) byId('res-conf').textContent = String(conf||'—')+'%';
-      if (byId('res-entry')) byId('res-entry').textContent = (entry && entry.toLocaleTimeString) ? entry.toLocaleTimeString('ar-SA') : '—';
-      if (byId('cooldown-note')) byId('cooldown-note').textContent = 'يجب الانتظار ' + tfMin + ' دقيقة قبل الصفقة التالية لهذا الإطار.';
-      if (m && m.style) m.style.display='flex';
-    };
-  }
-
-  // 4) Universal tap/click handler (Android, iPhone, Windows, macOS)
-  function onGenerateTap(ev){
-    try{
-      ev && ev.preventDefault && ev.preventDefault();
-      ev && ev.stopPropagation && ev.stopPropagation();
-
-      // Determine symbol / timeframe from UI if available
-      var sym = (function(){
-        var el = document.querySelector('#pair, [name="pair"], .pair-select, .asset-select, [data-current-pair]');
-        if (el){
-          if (el.value) return el.value;
-          if (el.getAttribute('data-current-pair')) return el.getAttribute('data-current-pair');
-          if (el.textContent && el.textContent.trim()) return el.textContent.trim();
-        }
-        return window.__NAIF_last_sym || 'EURUSD';
-      })();
-
-      var tfMin = (function(){
-        // sources: __TF.min, select[name=tf], data-tf, visible label like "M1"
-        if (window.__TF && Number.isFinite(Number(window.__TF.min))) return Math.max(1, parseInt(window.__TF.min,10));
-        var sel = document.querySelector('#tf, [name="tf"], .tf-select, [data-tf]');
-        if (sel){
-          var v = sel.getAttribute('data-tf') || sel.value || sel.textContent || '1';
-          var m = String(v).match(/\d+/);
-          if (m) return Math.max(1, parseInt(m[0],10));
-        }
-        return 1;
-      })();
-
-      var now = new Date();
-      var entry = new Date(now.getTime()); // enter now
-
-      // Default direction & confidence if none available
-      var dir = window.__NAIF_next_dir || 'BUY';
-      var conf = Math.max(1, Math.min(100, parseInt(window.__NAIF_next_conf||100,10)));
-
-      // Trigger your signal UI
-      window.openSignal(dir, conf, entry, sym, tfMin);
-
-    }catch(e){
-      console.warn('Generate tap error:', e);
-    }
-    return false;
-  }
-
-  function attachTo(el){
-    if (!el || el.__naifBound) return;
-    el.__naifBound = true;
-    var opts = {passive:false};
-    el.addEventListener('click', onGenerateTap, opts);
-    el.addEventListener('touchend', onGenerateTap, opts);
-    el.addEventListener('pointerup', onGenerateTap, opts);
-  }
-
-  function scanAndBind(){
-    // common ids/classes/labels
-    var selectors = [
-      '#btn-generate','#gen-btn','#generate','#get-signal','#getSignal','#signal-gen','#gen','#get_signal','#get-signal-btn',
-      '[data-action="gen"]','.btn-generate','.generate','.btn-get-signal'
-    ];
-    selectors.forEach(function(s){ document.querySelectorAll(s).forEach(attachTo); });
-    // Fallback: buttons with text containing "توليد" or "Signal"
-    Array.prototype.forEach.call(document.querySelectorAll('button, a, .btn, [role="button"]'), function(el){
-      var t = (el.textContent||'').trim();
-      if (/توليد|إشارة|Signal|Generate/i.test(t)) attachTo(el);
-    });
-  }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scanAndBind);
-  else scanAndBind();
-
-  // Re-scan if UI changes
-  try{ new MutationObserver(scanAndBind).observe(document.body, {childList:true, subtree:true}); }catch(_){}
-
-})();
-</script>
