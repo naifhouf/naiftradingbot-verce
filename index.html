@@ -145,6 +145,99 @@
   }
 </style>
 
+
+<!-- === NAIF Diagnostic Overlay === -->
+<script>
+(function(){
+  if (window.__NAIF_DIAG_APPLIED) return;
+  window.__NAIF_DIAG_APPLIED = true;
+
+  function ensureBanner(){
+    let b = document.getElementById('naif-diag');
+    if (!b){
+      b = document.createElement('div');
+      b.id = 'naif-diag';
+      b.style.position = 'fixed';
+      b.style.left = '12px';
+      b.style.right = '12px';
+      b.style.bottom = '12px';
+      b.style.background = 'rgba(0,0,0,.85)';
+      b.style.color = '#fff';
+      b.style.padding = '10px 14px';
+      b.style.borderRadius = '12px';
+      b.style.font = '12px/1.5 system-ui, Arial';
+      b.style.zIndex = 999999;
+      b.style.display = 'none';
+      b.style.whiteSpace = 'pre-wrap';
+      document.addEventListener('DOMContentLoaded', ()=>document.body.appendChild(b));
+    }
+    return b;
+  }
+  window.__naifBanner = ensureBanner();
+
+  window.naifShow = function(msg){
+    try {
+      const b = window.__naifBanner || ensureBanner();
+      b.style.display = 'block';
+      b.textContent = '[NAIF] ' + msg;
+      clearTimeout(b.__t);
+      b.__t = setTimeout(()=>{ b.style.display = 'none'; }, 6000);
+    } catch(_) {}
+  };
+
+  window.addEventListener('error', function(e){
+    naifShow('JS Error: ' + (e && e.message));
+  });
+  window.addEventListener('unhandledrejection', function(e){
+    var r = (e && (e.reason && (e.reason.message||e.reason))) || e;
+    naifShow('Promise Error: ' + r);
+  });
+
+  // After DOM ready, wrap key functions if present
+  function wrapFn(name){
+    try{
+      if (typeof window[name] === 'function'){
+        const _fn = window[name];
+        window[name] = function(){
+          try{
+            return _fn.apply(this, arguments);
+          }catch(err){
+            naifShow(name + ' error: ' + (err && err.message || err));
+            throw err;
+          }
+        };
+      }
+    }catch(_){}
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    ['canFire','mergeWithSrv','openSignal'].forEach(wrapFn);
+
+    // Attach a watcher for the Generate button result
+    const gen = document.getElementById('generate-btn');
+    if (gen){
+      gen.addEventListener('click', function(){
+        // After click, check outcomes shortly
+        setTimeout(function(){
+          try{
+            const cntEl = document.getElementById('signal-count');
+            const cnt = parseInt(cntEl && cntEl.textContent || '0',10)||0;
+            const winOpen = !!document.querySelector('#signal-modal, .signal-window, .naif-signal');
+            const wsState = (window.wsConnection && window.wsConnection.readyState);
+            if (!winOpen && !window.__LAST_SIGNAL_TS){
+              // No window, no counter change — show likely cause
+              if (wsState===0) naifShow('WebSocket CONNECTING… (قد يتأخر ظهور البيانات)');
+              else if (wsState===3) naifShow('WebSocket CLOSED — تأكد من WSS على Netlify أو عنوان السيرفر.');
+              else if (wsState===2) naifShow('WebSocket CLOSING…');
+              else naifShow('الزر نقر، لكن لم تُفتح نافذة الإشارة. تحقق من التفعيل/الشروط أو البيانات غير كافية.');
+            }
+          }catch(_){}
+        }, 600);
+      });
+    }
+  });
+})();
+</script>
+
 </head>
 <body>
 <div id="naif-circle" class="naif-circle"><div class="naif-text">NAIF</div><div class="wave"></div></div>
@@ -604,17 +697,18 @@ const genBtn=document.getElementById('generate-btn');
 const signalModal=document.getElementById('signal-modal');
 const closeSignal=document.getElementById('close-signal');
 const cooldownMap=new Map(); // key: tf minutes -> last timestamp
-function canFire(tf){
+function canFire(tfMin){
   const now=Date.now();
-  const last=cooldownMap.get(tf)||0;
+  const last=cooldownMap.get(tfMin)||0;
   let gap=0;
-  if(tf===1) gap=3*60000;        // 3 دقائق
-  else if(tf===5) gap=5*60000;   // 5 دقائق
+  if(tfMin===1) gap=3*60000;        // 3 دقائق
+  else if(tfMin===5) gap=5*60000;   // 5 دقائق
   else gap=0;                    // "الباقي نفسها" = بدون تغيير
   return {ok: now-last>=gap, remain: Math.max(0, gap-(now-last))};
 }
-function openSignal(dir, conf, entry, sym, tf){
-  const sd=document.getElementById('signal-direction');
+function openSignal(dir, conf, entry, sym, tfMin){
+  const tf = Number(tfMin)||1;
+const sd=document.getElementById('signal-direction');
   sd.textContent = dir;
   sd.className='signal-dir '+(/شراء|BUY/.test(dir)?'signal-good':/بيع|SELL/.test(dir)?'signal-bad':'signal-neutral');
   document.getElementById('res-pair').textContent=sym;
@@ -650,7 +744,7 @@ function openSignal(dir, conf, entry, sym, tf){
 }
   }catch(_){}
 }
-    const __endTs = entry.getTime() + (Number(tf)||1)*60*1000;
+    const __endTs = entry.getTime() + (Number(tfMin)||1)*60*1000;
     if (typeof window.__NAIF_startExpiryCountdown === 'function') {
       window.__NAIF_startExpiryCountdown(__endTs);
     }
@@ -660,7 +754,7 @@ closeSignal.addEventListener('click',()=>{signalModal.style.display='none';});
 
 genBtn.addEventListener('click',()=>{
   const __TF = __NAIF_getTF(); const tfVal=__TF.v, tfUnit=__TF.u, tfMs=__TF.ms, tfMin=__TF.minutes;
-  const {ok, remain} = canFire(tf);
+  const {ok, remain} = canFire(tfMin);
   if(!ok){
     errorFx();
     const m = Math.ceil(remain/60000);
@@ -668,13 +762,13 @@ genBtn.addEventListener('click',()=>{
     return;
   }
   const sym=currentSymbol();
-  const series=mergeWithSrv(sym, tf, 160);
+  const series=mergeWithSrv(sym, tfMin, 160);
   if(series.length<40){ errorFx(); alert(I18N[CUR_LANG].notEnough); return; }
   const {dir,conf}=scoreAll(series);
-  const now=riyadhNow(); now.setSeconds(0); now.setMilliseconds(0); const entry=new Date(now.getTime()+tf*60000);
-  openSignal(dir, conf, entry, sym, tf);
+  const now=riyadhNow(); now.setSeconds(0); now.setMilliseconds(0); const entry=new Date(now.getTime()+tfMin*60000);
+  openSignal(dir, conf, entry, sym, tfMin);
   successFx();
-  cooldownMap.set(tf, Date.now());
+  cooldownMap.set(tfMin, Date.now());
 
   // counter (starts from zero each load as requested)
   const cntEl=document.getElementById('signal-count');
@@ -857,7 +951,7 @@ const B=[]; function spawn(){const x=W+Math.random()*200,b=8+Math.random()*24,hi
         const now = (function(){return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Riyadh'}));})();
         now.setSeconds(0); now.setMilliseconds(0);
         const __TF2 = __NAIF_getTF(); const entry = new Date(now.getTime()+__TF2.ms);
-        (function openSignal(dir, conf, entry, sym, tf){
+        (function openSignal(dir, conf, entry, sym, tfMin){
           const sd=document.getElementById('signal-direction');
           sd.textContent = dir;
           sd.className='signal-dir '+(/شراء|BUY/.test(dir)?'signal-good':/بيع|SELL/.test(dir)?'signal-bad':'signal-neutral');
@@ -1166,13 +1260,13 @@ try{
   // Patch openSignal to append details
   const _openSignal = window.openSignal;
   window.openSignal = function(dir, conf, entry, sym, tf){
-    if(typeof _openSignal === 'function') _openSignal(dir, conf, entry, sym, tf);
+    if(typeof _openSignal === 'function') _openSignal(dir, conf, entry, sym, tfMin);
     try{
       const __TFcur = (typeof __NAIF_getTF==='function') ? __NAIF_getTF() : {v:1,u:'m',ms:60000,minutes:1}; const tfVal=__TFcur.v, tfUnit=__TFcur.u, tfMs=__TFcur.ms, tfMin=__TFcur.minutes;const __TFcur = (typeof __NAIF_getTF==='function') ? __NAIF_getTF() : {v:1,u:'m',ms:60000,minutes:1}; const tfVal=__TFcur.v, tfUnit=__TFcur.u, tfMs=__TFcur.ms, tfMin=__TFcur.minutes;const bullets = document.getElementById('signal-bullets');
       if (bullets){
         bullets.innerHTML = '';
         // gather context
-        const series = (typeof mergeWithSrv==='function') ? mergeWithSrv(sym, tf, 220) : [];
+        const series = (typeof mergeWithSrv==='function') ? mergeWithSrv(sym, tfMin, 220) : [];
         let reason = (CUR_LANG==='ar' ? 'توافق اتجاه وفوليوم مع تصويت المؤشرات' : 'Trend & Volume aligned with indicators vote');
         // votes from scoreAll if available
         let votes = [];
@@ -1530,7 +1624,7 @@ document.addEventListener('DOMContentLoaded', function(){
   // Replace openSignal to add countdowns and messages
   const _openSignal = window.openSignal;
   window.openSignal = function(dir, conf, entry, sym, tf){
-    if(typeof _openSignal === 'function') _openSignal(dir, conf, entry, sym, tf);
+    if(typeof _openSignal === 'function') _openSignal(dir, conf, entry, sym, tfMin);
     try{
       const __TFcur = (typeof __NAIF_getTF==='function') ? __NAIF_getTF() : {v:1,u:'m',ms:60000,minutes:1}; const tfVal=__TFcur.v, tfUnit=__TFcur.u, tfMs=__TFcur.ms, tfMin=__TFcur.minutes;const __TFcur = (typeof __NAIF_getTF==='function') ? __NAIF_getTF() : {v:1,u:'m',ms:60000,minutes:1}; const tfVal=__TFcur.v, tfUnit=__TFcur.u, tfMs=__TFcur.ms, tfMin=__TFcur.minutes;const modal = document.getElementById('signal-modal');
       applyModalAccent(modal);
@@ -2696,7 +2790,7 @@ if(!wasReady && nowReady){
       if (typeof window.__NAIF_lastPrice === 'number') return window.__NAIF_lastPrice;
       if (typeof mergeWithSrv === 'function'){
         // prefer 1m to get freshest candle close
-        const s1 = mergeWithSrv(sym, Math.min(1, Number(tf)||1), 40);
+        const s1 = mergeWithSrv(sym, Math.min(1, Number(tfMin)||1), 40);
         if (s1 && s1.length) return s1[s1.length-1].c;
       }
     }catch(_){}
@@ -2740,6 +2834,46 @@ if(!wasReady && nowReady){
       pnlEl.textContent = sign + (Math.abs(diff)).toFixed( (entryP>=10)? 3 : 5 ) + ' (' + sign + pipsStr + ' pips)';
     }catch(_){}
   };
+})();
+</script>
+
+
+<script>
+(function(){
+  if (typeof window.__NAIF_getTF !== 'function') {
+    window.__NAIF_getTF = function(){
+      var btn = document.querySelector('#tf-options .time-btn.selected');
+      var minutes = btn ? Number(btn.getAttribute('data-time')) || 1 : 1;
+      return { v: minutes, u: 'm', ms: minutes*60000, minutes: minutes };
+    };
+  }
+})();
+</script>
+
+
+<script>
+(function(){
+  const mark = function(){ window.__LAST_SIGNAL_TS = Date.now(); };
+  try{
+    if (typeof openSignal === 'function'){
+      const _o = openSignal;
+      openSignal = function(){
+        mark();
+        return _o.apply(this, arguments);
+      };
+    } else {
+      // If defined later
+      document.addEventListener('DOMContentLoaded', function(){
+        if (typeof openSignal === 'function'){
+          const _o = openSignal;
+          openSignal = function(){
+            mark();
+            return _o.apply(this, arguments);
+          };
+        }
+      });
+    }
+  }catch(_){}
 })();
 </script>
 
