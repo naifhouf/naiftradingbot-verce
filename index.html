@@ -543,10 +543,10 @@ const closeSignal=document.getElementById('close-signal');
 const cooldownMap=new Map(); // key: tf minutes -> last timestamp
 function canFire(tfMin){
   const now=Date.now();
-  const last=cooldownMap.get(tf)||0;
+  const last=cooldownMap.get(tfMin)||0;
   let gap=0;
-  if(tf===1) gap=3*60000;        // 3 دقائق
-  else if(tf===5) gap=5*60000;   // 5 دقائق
+  if(tfMin===1) gap=3*60000;        // 3 دقائق
+  else if(tfMin===5) gap=5*60000;   // 5 دقائق
   else gap=0;                    // "الباقي نفسها" = بدون تغيير
   return {ok: now-last>=gap, remain: Math.max(0, gap-(now-last))};
 }
@@ -2232,6 +2232,20 @@ if(!wasReady && nowReady){
   document.getElementById('currency-pair')?.addEventListener('change', updateBarsProgress);
   document.getElementById('market-switch')?.addEventListener('click', updateBarsProgress);
   document.getElementById('timeframe')?.addEventListener('change', updateBarsProgress);
+})();
+</script>
+
+
+<script>
+// === NAIF fallback: ensure __NAIF_getTF exists (for hosted/mobile builds) ===
+(function(){
+  if (typeof window.__NAIF_getTF !== 'function') {
+    window.__NAIF_getTF = function(){
+      var btn = document.querySelector('#tf-options .time-btn.selected');
+      var minutes = btn ? Number(btn.getAttribute('data-time')) || 1 : 1;
+      return { v: minutes, u: 'm', ms: minutes*60000, minutes: minutes };
+    };
+  }
 })();
 </script>
 
