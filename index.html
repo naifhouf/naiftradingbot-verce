@@ -834,7 +834,7 @@ const B=[]; function spawn(){const x=W+Math.random()*200,b=8+Math.random()*24,hi
         // Filters
         const trend = __NAIF_filters.trendOK(srs);
         const volOK = __NAIF_filters.volumeOK(srs);
-        const htf = __NAIF_filters.htfAgree(sym, tfMin);
+        const htf = true /* htfAgree disabled */;
 
         // Determine desired direction as +1 / -1
         const want = /شراء|BUY/.test(dir) ? 'up' : /بيع|SELL/.test(dir) ? 'dn' : null;
@@ -849,40 +849,7 @@ const B=[]; function spawn(){const x=W+Math.random()*200,b=8+Math.random()*24,hi
           if(!volOK) reasons.push(CUR_LANG==='ar'?'حجم ضعيف':'Low volume');
           if(!trendPass) reasons.push(CUR_LANG==='ar'?'اتجاه غير مناسب':'Trend mismatch');
           if(!htfPass) reasons.push(CUR_LANG==='ar'?'عدم توافق مع إطار أعلى':'No HTF agreement');
-          alert((CUR_LANG==='ar'?'فلتر رفض الإشارة: ':'Signal filtered: ')+reasons.join(' + '));
-          return;
-        }
-
-        // Passed filters -> open modal and success sound
-        const now = (function(){return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Riyadh'}));})();
-        now.setSeconds(0); now.setMilliseconds(0);
-        const __TF2 = __NAIF_getTF(); const entry = new Date(now.getTime()+__TF2.ms);
-        (function openSignal(dir, conf, entry, sym, tfMin){
-          const sd=document.getElementById('signal-direction');
-          sd.textContent = dir;
-          sd.className='signal-dir '+(/شراء|BUY/.test(dir)?'signal-good':/بيع|SELL/.test(dir)?'signal-bad':'signal-neutral');
-          document.getElementById('res-pair').textContent=sym;
-          document.getElementById('res-tf').textContent=tf+'m';
-          document.getElementById('res-conf').textContent=conf+'%';
-          document.getElementById('res-entry').textContent=entry.toLocaleTimeString(CUR_LANG==='ar'?'ar-SA':'en-US');
-          const cd=document.getElementById('cooldown-note');
-          cd.textContent = tf===1 ? I18N[CUR_LANG].cooldown1 : tf===5 ? I18N[CUR_LANG].cooldown5 : '';
-          document.getElementById('signal-modal').style.display='flex';
-        })(dir, conf, entry, sym, tf);
-
-        successFx();
-        const cntEl=document.getElementById('signal-count');
-        const n=(parseInt(cntEl.textContent||'0',10)||0)+1; cntEl.textContent=n;
-
-      }catch(err){
-        console.error(err);
-        errorFx();
-        naifShowError(CUR_LANG==='ar'?'خطأ غير متوقع':'Unexpected', CUR_LANG==='ar'?'حدث خطأ غير متوقع.':'Unexpected error.');
-      }
-    }, {capture:false});
-  })();
-})();
-</script>
+          alert((CUR_LANG==='ar'?'تنبيه: تم تجاهل فلتر الإطار الأعلى حسب الإعداد.</script>
 
 
 <script>
