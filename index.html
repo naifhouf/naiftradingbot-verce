@@ -336,11 +336,11 @@
     
       <div class="tile"><div class="mini" data-i18n="entryAt">الدخول عند</div><div class="kpi" id="res-entry">—</div></div>
 <div class="tile">
-  <div class="mini">سعر الدخول</div>
+  <div class="mini" data-i18n="entryPrice">سعر الدخول</div>
   <div class="kpi" id="res-price">—</div>
 </div>
 <div class="tile">
-  <div class="mini">سعر الخروج</div>
+  <div class="mini" data-i18n="exitPrice">سعر الخروج</div>
   <div class="kpi" id="res-exit"
 >—</div>
 </div>
@@ -449,6 +449,7 @@ function naifMinBarsByTF(tfMinutes){
 
 const I18N={
   ar: {
+      details:'تفاصيل',
     appName:"NAIF TRADING BOT VIP",
     riyadhTime:"توقيت الرياض",
     signalsCount:"عدد الإشارات",
@@ -489,6 +490,7 @@ const I18N={
     tipSignal:"هذه الإشارة مُولّدة وفق تحليل المؤشرات + الفوليوم + الاتجاه + التوافق متعدد الأطر. انتبه للمهلة بين الصفقات."
   },
   en: {
+      details:'Details',
     appName:"NAIF TRADING BOT VIP",
     riyadhTime:"Riyadh Time",
     signalsCount:"Signals",
@@ -620,7 +622,7 @@ const tickBuf=new Map(); const srvCandles=new Map();
 function pushTick(sym,price,ts){const arr=tickBuf.get(sym)||[];arr.push({t:ts||Date.now(),p:price}); if(arr.length>12000) arr.splice(0,arr.length-12000); tickBuf.set(sym,arr);}
 function pushSrvCandle(sym,c){const arr=srvCandles.get(sym)||[];arr.push(c); if(arr.length>2000) arr.splice(0,arr.length-2000); srvCandles.set(sym,arr);}
 function handleWs(msg){const sym=(msg.symbol||msg.s||msg.asset||'').replace('/','')||currentSymbol(); const price=Number(msg.price||msg.c||msg.last); const ts=Number(msg.ts||msg.time||Date.now()); if(isFinite(price)){pushTick(sym,price,ts); updatePriceDisplay(sym,price);} const cndl=msg.candle||msg.ohlc||msg.bar; if(cndl){const o=Number(cndl.o??cndl.open),h=Number(cndl.h??cndl.high),l=Number(cndl.l??cndl.low),c=Number(cndl.c??cndl.close); const vt=Number(cndl.v??cndl.volume)||0; const tt=Number(cndl.t??cndl.ts??cndl.time)||ts; if([o,h,l,c].every(isFinite)) pushSrvCandle(sym,{t:tt,o,h,l,c,v:vt});}}
-function updatePriceDisplay(sym,price){const pv=document.getElementById('price-value'); const ps=document.getElementById('price-symbol'); const pc=document.getElementById('price-change'); const pt=document.getElementById('price-time'); const dot=document.getElementById('live-dot'); ps.textContent=sym; updateAssetDecor(sym); pv.textContent=(/JPY\b/.test(sym)? price.toFixed(3) : (price>=100? price.toFixed(2) : price.toFixed(5))); const ch=lastPrice? price-lastPrice:0; const isUp=ch>=0; pc.className='price-change '+(isUp?'up':'down'); pc.textContent=(isUp?'+':'')+(Math.abs(ch)<1? ch.toFixed(5): ch.toFixed(2)); pt.textContent=new Date().toLocaleTimeString(CUR_LANG==='ar'?'ar-SA':'en-US'); dot.classList.add('dot-live'); lastPrice=price;}
+function updatePriceDisplay(sym,price){const pv=document.getElementById('price-value'); const ps=document.getElementById('price-symbol'); const pc=document.getElementById('price-change'); const pt=document.getElementById('price-time'); const dot=document.getElementById('live-dot'); ps.textContent=sym; updateAssetDecor(sym); pv.textContent=(/JPY\b/.test(sym)? price.toFixed(3) : (price>=100? price.toFixed(2) : price.toFixed(5))); const ch=lastPrice? price-lastPrice:0; const isUp=ch>=0; pc.className='price-change '+(isUp?'up':'down'); pc.textContent=(isUp?'+':'')+(Math.abs(ch)<1? ch.toFixed(5): ch.toFixed(2)); pt.textContent=new Date().toLocaleTimeString(CUR_LANG==='ar'?'ar-SA':'en-US'); dot.classList.add('dot-live'); lastPrice = price; window.__NAIF_lastPrice = price;}
 
 /* ===== شموع + مؤشرات ===== */
 function bucketStart(ts,tfMin){const d=new Date(ts); const s=new Date(d.toLocaleString('en-US',{timeZone:'Asia/Riyadh'})); const base=new Date(s.getFullYear(),s.getMonth(),s.getDate(),s.getHours(),Math.floor(s.getMinutes()/tfMin)*tfMin,0,0); return base.getTime();}
@@ -671,6 +673,20 @@ const sd=document.getElementById('signal-direction');
   const cd=document.getElementById('cooldown-note');
   cd.textContent = tf===1 ? I18N[CUR_LANG].cooldown1 : tf===5 ? I18N[CUR_LANG].cooldown5 : '';
   signalModal.style.display='flex';
+  // Auto-render and open MTF details on signal open
+  try{
+    if (window.__NAIF_last_mtf && typeof window.__NAIF_renderMTFDetails==='function'){
+      window.__NAIF_renderMTFDetails(window.__NAIF_last_mtf, tf);
+      var box = document.getElementById('mtf-details');
+      if(box){ box.style.display='block'; }
+      var btn = document.getElementById('mtf-toggle');
+      if(btn){
+        var span = btn.querySelector('span');
+        if(span) span.textContent = (window.CUR_LANG==='ar'?'إخفاء التفاصيل':'Hide details');
+      }
+    }
+  }catch(e){ console.warn('auto MTF open error', e); }
+
 
   try{
     if (typeof window.__NAIF_startEntryCountdown === 'function') {
@@ -2787,6 +2803,24 @@ if(!wasReady && nowReady){
       pnlEl.textContent = sign + (Math.abs(diff)).toFixed( (entryP>=10)? 3 : 5 ) + ' (' + sign + pipsStr + ' pips)';
     }catch(_){}
   };
+})();
+</script>
+
+
+<script>
+(function(){
+  // Re-apply i18n texts for MTF button on load and when toggled
+  function syncMtfBtn(){
+    var btn = document.getElementById('mtf-toggle');
+    if (!btn) return;
+    var open = document.getElementById('mtf-details') && document.getElementById('mtf-details').style.display==='block';
+    var span = btn.querySelector('span');
+    if (!span) return;
+    if (open){ span.textContent = (window.CUR_LANG==='ar'?'إخفاء التفاصيل':'Hide details'); }
+    else { span.textContent = (window.CUR_LANG==='ar'?'تفاصيل':'Details'); }
+  }
+  document.addEventListener('DOMContentLoaded', syncMtfBtn);
+  window.addEventListener('naif-lang-change', syncMtfBtn);
 })();
 </script>
 
