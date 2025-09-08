@@ -1,6 +1,52 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+
+<script>
+(function(){
+  // Minimal banner for messages
+  function ensureBanner(){
+    var b = document.getElementById('naif-msg');
+    if (!b){
+      b = document.createElement('div');
+      b.id = 'naif-msg';
+      b.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;background:rgba(0,0,0,.85);color:#fff;padding:10px 14px;border-radius:12px;font:12px/1.5 system-ui,Arial;z-index:999999;display:none;white-space:pre-wrap';
+      document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(b); });
+    }
+    return b;
+  }
+  window.naifShow = window.naifShow || function(msg){
+    try{
+      var b = ensureBanner();
+      b.style.display = 'block';
+      b.textContent = '[NAIF] ' + String(msg||'');
+      clearTimeout(b.__t);
+      b.__t = setTimeout(function(){ b.style.display='none'; }, 5000);
+    }catch(_){}
+  };
+  window.naifShowError = window.naifShowError || function(title, msg){
+    var text = (title ? String(title)+': ' : '') + String(msg||'');
+    if (window.naifShow) window.naifShow(text); else alert(text);
+  };
+  // Global fmt(ms) => "mm:ss"
+  window.fmt = window.fmt || function(ms){
+    ms = Math.max(0, Number(ms)||0);
+    var s = Math.floor(ms/1000);
+    var m = Math.floor(s/60);
+    var r = s % 60;
+    return String(m).padStart(2,'0') + ':' + String(r).padStart(2,'0');
+  };
+  // TF fallback if helper missing
+  if (typeof window.__NAIF_getTF !== 'function'){
+    window.__NAIF_getTF = function(){
+      var btn = document.querySelector('#tf-options .time-btn.selected');
+      var minutes = btn ? Number(btn.getAttribute('data-time')) || 1 : 1;
+      return { v: minutes, u: 'm', ms: minutes*60000, minutes: minutes };
+    };
+  }
+})();
+</script>
+
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>NAIF TRADING BOT VIP— PocketOption</title>
@@ -144,99 +190,6 @@
     #signal-modal .modal-box{ width:min(94vw, 360px) !important; max-width:360px !important; margin:6vh auto !important; border-radius:12px; }
   }
 </style>
-
-
-<!-- === NAIF Diagnostic Overlay === -->
-<script>
-(function(){
-  if (window.__NAIF_DIAG_APPLIED) return;
-  window.__NAIF_DIAG_APPLIED = true;
-
-  function ensureBanner(){
-    let b = document.getElementById('naif-diag');
-    if (!b){
-      b = document.createElement('div');
-      b.id = 'naif-diag';
-      b.style.position = 'fixed';
-      b.style.left = '12px';
-      b.style.right = '12px';
-      b.style.bottom = '12px';
-      b.style.background = 'rgba(0,0,0,.85)';
-      b.style.color = '#fff';
-      b.style.padding = '10px 14px';
-      b.style.borderRadius = '12px';
-      b.style.font = '12px/1.5 system-ui, Arial';
-      b.style.zIndex = 999999;
-      b.style.display = 'none';
-      b.style.whiteSpace = 'pre-wrap';
-      document.addEventListener('DOMContentLoaded', ()=>document.body.appendChild(b));
-    }
-    return b;
-  }
-  window.__naifBanner = ensureBanner();
-
-  window.naifShow = function(msg){
-    try {
-      const b = window.__naifBanner || ensureBanner();
-      b.style.display = 'block';
-      b.textContent = '[NAIF] ' + msg;
-      clearTimeout(b.__t);
-      b.__t = setTimeout(()=>{ b.style.display = 'none'; }, 6000);
-    } catch(_) {}
-  };
-
-  window.addEventListener('error', function(e){
-    naifShow('JS Error: ' + (e && e.message));
-  });
-  window.addEventListener('unhandledrejection', function(e){
-    var r = (e && (e.reason && (e.reason.message||e.reason))) || e;
-    naifShow('Promise Error: ' + r);
-  });
-
-  // After DOM ready, wrap key functions if present
-  function wrapFn(name){
-    try{
-      if (typeof window[name] === 'function'){
-        const _fn = window[name];
-        window[name] = function(){
-          try{
-            return _fn.apply(this, arguments);
-          }catch(err){
-            naifShow(name + ' error: ' + (err && err.message || err));
-            throw err;
-          }
-        };
-      }
-    }catch(_){}
-  }
-  document.addEventListener('DOMContentLoaded', function(){
-    ['canFire','mergeWithSrv','openSignal'].forEach(wrapFn);
-
-    // Attach a watcher for the Generate button result
-    const gen = document.getElementById('generate-btn');
-    if (gen){
-      gen.addEventListener('click', function(){
-        // After click, check outcomes shortly
-        setTimeout(function(){
-          try{
-            const cntEl = document.getElementById('signal-count');
-            const cnt = parseInt(cntEl && cntEl.textContent || '0',10)||0;
-            const winOpen = !!document.querySelector('#signal-modal, .signal-window, .naif-signal');
-            const wsState = (window.wsConnection && window.wsConnection.readyState);
-            if (!winOpen && !window.__LAST_SIGNAL_TS){
-              // No window, no counter change — show likely cause
-              if (wsState===0) naifShow('WebSocket CONNECTING… (قد يتأخر ظهور البيانات)');
-              else if (wsState===3) naifShow('WebSocket CLOSED — تأكد من WSS على Netlify أو عنوان السيرفر.');
-              else if (wsState===2) naifShow('WebSocket CLOSING…');
-              else naifShow('الزر نقر، لكن لم تُفتح نافذة الإشارة. تحقق من التفعيل/الشروط أو البيانات غير كافية.');
-            }
-          }catch(_){}
-        }, 600);
-      });
-    }
-  });
-})();
-</script>
 
 </head>
 <body>
@@ -2834,46 +2787,6 @@ if(!wasReady && nowReady){
       pnlEl.textContent = sign + (Math.abs(diff)).toFixed( (entryP>=10)? 3 : 5 ) + ' (' + sign + pipsStr + ' pips)';
     }catch(_){}
   };
-})();
-</script>
-
-
-<script>
-(function(){
-  if (typeof window.__NAIF_getTF !== 'function') {
-    window.__NAIF_getTF = function(){
-      var btn = document.querySelector('#tf-options .time-btn.selected');
-      var minutes = btn ? Number(btn.getAttribute('data-time')) || 1 : 1;
-      return { v: minutes, u: 'm', ms: minutes*60000, minutes: minutes };
-    };
-  }
-})();
-</script>
-
-
-<script>
-(function(){
-  const mark = function(){ window.__LAST_SIGNAL_TS = Date.now(); };
-  try{
-    if (typeof openSignal === 'function'){
-      const _o = openSignal;
-      openSignal = function(){
-        mark();
-        return _o.apply(this, arguments);
-      };
-    } else {
-      // If defined later
-      document.addEventListener('DOMContentLoaded', function(){
-        if (typeof openSignal === 'function'){
-          const _o = openSignal;
-          openSignal = function(){
-            mark();
-            return _o.apply(this, arguments);
-          };
-        }
-      });
-    }
-  }catch(_){}
 })();
 </script>
 
