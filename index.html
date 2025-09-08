@@ -566,7 +566,7 @@ function openSignal(dir, conf, entry, sym, tf){
     if (typeof window.__NAIF_startEntryCountdown === 'function') {
       window.__NAIF_startEntryCountdown(entry.getTime());
     }
-    const __endTs = entry.getTime() + (Number(tf)||1)*60*1000;
+    const __endTs = entry.getTime() + (Number(tfMin)||1)*60*1000;
     if (typeof window.__NAIF_startExpiryCountdown === 'function') {
       window.__NAIF_startExpiryCountdown(__endTs);
     }
@@ -583,8 +583,7 @@ genBtn.addEventListener('click',()=>{
   const {ok, remain} = canFire(tfMin);
   if(!ok){
     errorFx();
-    const m = Math.ceil(remain/60000);
-    alert(CUR_LANG==='ar' ? `يجب الانتظار ${m} دقيقة قبل الصفقة التالية لهذا الإطار.` : `Please wait ${m} minute(s) before next trade for this timeframe.`);
+    const __msg = naifCooldownMessage(Date.now()+remain, tfMin); alert(__msg||''); naifDebug(__msg||'cooldown empty');
     return;
   }
   const sym=currentSymbol();
@@ -592,7 +591,7 @@ genBtn.addEventListener('click',()=>{
   if(series.length<40){ errorFx(); alert(I18N[CUR_LANG].notEnough); return; }
   const {dir,conf}=scoreAll(series);
   const now=riyadhNow(); now.setSeconds(0); now.setMilliseconds(0); const entry=new Date(now.getTime() + tfMin*60000);
-  openSignal(dir, conf, entry, sym, tf);
+  try{ openSignal(dir, conf, entry, sym, tfMin); }catch(e){ naifDebug('openSignal error: '+(e&&e.message||e)); }
   successFx();
   cooldownMap.set(tfMin, Date.now());
 
@@ -1090,7 +1089,7 @@ try{
   // Patch openSignal to append details
   const _openSignal = window.openSignal;
   window.openSignal = function(dir, conf, entry, sym, tf){
-    if(typeof _openSignal === 'function') _openSignal(dir, conf, entry, sym, tf);
+    if(typeof _openSignal === 'function') _try{ openSignal(dir, conf, entry, sym, tfMin); }catch(e){ naifDebug('openSignal error: '+(e&&e.message||e)); }
     try{
       const __TFcur = (typeof __NAIF_getTF==='function') ? __NAIF_getTF() : {v:1,u:'m',ms:60000,minutes:1}; const tfVal=__TFcur.v, tfUnit=__TFcur.u, tfMs=__TFcur.ms, tfMin=__TFcur.minutes;const __TFcur = (typeof __NAIF_getTF==='function') ? __NAIF_getTF() : {v:1,u:'m',ms:60000,minutes:1}; const tfVal=__TFcur.v, tfUnit=__TFcur.u, tfMs=__TFcur.ms, tfMin=__TFcur.minutes;const bullets = document.getElementById('signal-bullets');
       if (bullets){
@@ -1454,7 +1453,7 @@ document.addEventListener('DOMContentLoaded', function(){
   // Replace openSignal to add countdowns and messages
   const _openSignal = window.openSignal;
   window.openSignal = function(dir, conf, entry, sym, tf){
-    if(typeof _openSignal === 'function') _openSignal(dir, conf, entry, sym, tf);
+    if(typeof _openSignal === 'function') _try{ openSignal(dir, conf, entry, sym, tfMin); }catch(e){ naifDebug('openSignal error: '+(e&&e.message||e)); }
     try{
       const __TFcur = (typeof __NAIF_getTF==='function') ? __NAIF_getTF() : {v:1,u:'m',ms:60000,minutes:1}; const tfVal=__TFcur.v, tfUnit=__TFcur.u, tfMs=__TFcur.ms, tfMin=__TFcur.minutes;const __TFcur = (typeof __NAIF_getTF==='function') ? __NAIF_getTF() : {v:1,u:'m',ms:60000,minutes:1}; const tfVal=__TFcur.v, tfUnit=__TFcur.u, tfMs=__TFcur.ms, tfMin=__TFcur.minutes;const modal = document.getElementById('signal-modal');
       applyModalAccent(modal);
@@ -2236,9 +2235,54 @@ if(!wasReady && nowReady){
 </script>
 
 
+<!-- === NAIF helpers (cooldown + debug) === -->
 <script>
-// === NAIF fallback: ensure __NAIF_getTF exists (for hosted/mobile builds) ===
 (function(){
+  if (window.__NAIF_HELPERS) return;
+  window.__NAIF_HELPERS = true;
+
+  window.naifEnsureNumber = function(v, fallback=0){
+    var n = Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  };
+  window.naifFormatRemaining = function(ms){
+    ms = Math.max(0, naifEnsureNumber(ms, 0));
+    var total = Math.ceil(ms/1000);
+    var m = Math.floor(total/60);
+    var s = total % 60;
+    var mm = String(m);
+    var ss = String(s).padStart(2,'0');
+    if (m > 0) return mm + ":" + ss + " دقيقة";
+    return ss + " ثانية";
+  };
+  window.naifCooldownMessage = function(nextTs, tfMin){
+    var now = Date.now();
+    nextTs = naifEnsureNumber(nextTs, 0);
+    tfMin = naifEnsureNumber(tfMin, 1);
+    var remain = Math.max(0, nextTs - now);
+    if (remain <= 0) return "";
+    var at = new Date(nextTs);
+    var hh = String(at.getHours()).padStart(2,"0");
+    var mm = String(at.getMinutes()).padStart(2,"0");
+    var ss = String(at.getSeconds()).padStart(2,"0");
+    return "الرجاء الانتظار " + naifFormatRemaining(remain) + " قبل الصفقة التالية لهذا الإطار ("+ tfMin +"m). وقت السماح: " + hh + ":" + mm + ":" + ss;
+  };
+
+  // Minimal debug banner
+  const banner = document.createElement('div');
+  banner.id = 'naif-debug';
+  banner.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;background:rgba(0,0,0,.7);color:#fff;padding:8px 12px;border-radius:10px;font:12px/1.4 system-ui,Arial;z-index:99999;display:none';
+  document.addEventListener('DOMContentLoaded',()=>document.body.appendChild(banner));
+  window.naifDebug = function(msg){
+    try{
+      banner.style.display = 'block';
+      banner.textContent = '[Debug] ' + msg;
+      clearTimeout(banner.__t);
+      banner.__t = setTimeout(()=>{ banner.style.display='none'; }, 4000);
+    }catch(_){}
+  };
+
+  // Fallback for __NAIF_getTF if missing (hosted/mobile)
   if (typeof window.__NAIF_getTF !== 'function') {
     window.__NAIF_getTF = function(){
       var btn = document.querySelector('#tf-options .time-btn.selected');
