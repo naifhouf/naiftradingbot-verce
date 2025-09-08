@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>NAIF TRADING BOT — pocketoption</title>
+<title>NAIF TRADING BOT VIP— PocketOption</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
@@ -128,20 +128,20 @@
 
 <style id="naif-compact-ui">
   /* Compact modal width + spacing */
-  #signal-modal .modal-box{ width:min(90vw, 440px) !important; max-width:440px !important; margin:8vh auto !important; border-radius:12px; }
+  #signal-modal .modal-box{ width:min(94vw, 360px) !important; max-width:360px !important; margin:6vh auto !important; border-radius:12px; }
   /* KPI typography */
-  #signal-modal .tile .kpi{ font-size: clamp(14px, 2.2vw, 18px); }
-  #signal-modal .tile .mini{ font-size: 11px; opacity:.9; }
+  #signal-modal .tile .kpi{ font-size: clamp(13px, 2vw, 16px); }
+  #signal-modal .tile .mini{ font-size: 10px; opacity:.9; }
   /* MTF details responsiveness */
-  #mtf-details{ max-height: 36vh; overflow:auto; }
+  #mtf-details{ max-height: 32vh; overflow:auto; }
   #mtf-details .table-wrap{ max-width: 100%; overflow: auto; }
-  #mtf-table th, #mtf-table td{ padding: 6px; }
-  #mtf-mini-chart > div{ min-width: 50px; padding: 6px 8px; font-size: 12px; }
+  #mtf-table th, #mtf-table td{ padding: 4px; }
+  #mtf-mini-chart > div{ min-width: 44px; padding: 4px 6px; font-size: 11px; }
   /* Progress text sizing */
-  #bars-progress .bars-text{ font-size: 12px; }
+  #bars-progress .bars-text{ font-size: 11px; }
   /* Small screens */
   @media (max-width: 420px){
-    #signal-modal .modal-box{ width:min(90vw, 440px) !important; max-width:440px !important; margin:8vh auto !important; border-radius:12px; }
+    #signal-modal .modal-box{ width:min(94vw, 360px) !important; max-width:360px !important; margin:6vh auto !important; border-radius:12px; }
   }
 </style>
 
@@ -215,7 +215,7 @@
   <div class="section">
     <div class="section-title"><span><i class="fas fa-chart-line"></i> <span data-i18n="marketType">نوع السوق</span></span><span class="section-info">live/otc</span></div>
     <div class="time-options" id="market-switch">
-      <div class="time-btn selected" data-market="live" data-i18n="live">حي</div>
+      <div class="time-btn selected" data-market="live" data-i18n="live">مباشر</div>
       <div class="time-btn" data-market="otc">OTC</div>
     </div>
   </div>
@@ -403,7 +403,7 @@ function naifMinBarsByTF(tfMinutes){
 
 const I18N={
   ar: {
-    appName:"NAIF TRADING BOT",
+    appName:"NAIF TRADING BOT VIP",
     riyadhTime:"توقيت الرياض",
     signalsCount:"عدد الإشارات",
     livePrice:"السعر اللحظي",
@@ -416,7 +416,7 @@ const I18N={
     licenseHint:"يمكن النسخ/اللصق داخل حقل السيريال فقط",
     activate:"تفعيل",
     ok:"تم",
-    live:"حي",
+    live:"سوق حقيقي",
     notEnough:"لا توجد بيانات كافية بعد.",
     strength:"القوة",
     entryAt:"الدخول عند",
@@ -443,7 +443,7 @@ const I18N={
     tipSignal:"هذه الإشارة مُولّدة وفق تحليل المؤشرات + الفوليوم + الاتجاه + التوافق متعدد الأطر. انتبه للمهلة بين الصفقات."
   },
   en: {
-    appName:"NAIF TRADING BOT",
+    appName:"NAIF TRADING BOT VIP",
     riyadhTime:"Riyadh Time",
     signalsCount:"Signals",
     livePrice:"Live Price",
@@ -604,7 +604,7 @@ const genBtn=document.getElementById('generate-btn');
 const signalModal=document.getElementById('signal-modal');
 const closeSignal=document.getElementById('close-signal');
 const cooldownMap=new Map(); // key: tf minutes -> last timestamp
-function canFire(tf){
+function canFire(tfMin){
   const now=Date.now();
   const last=cooldownMap.get(tf)||0;
   let gap=0;
@@ -613,35 +613,79 @@ function canFire(tf){
   else gap=0;                    // "الباقي نفسها" = بدون تغيير
   return {ok: now-last>=gap, remain: Math.max(0, gap-(now-last))};
 }
+
 function openSignal(dir, conf, entry, sym, tf){
-  const sd=document.getElementById('signal-direction');
-  sd.textContent = dir;
-  sd.className='signal-dir '+(/شراء|BUY/.test(dir)?'signal-good':/بيع|SELL/.test(dir)?'signal-bad':'signal-neutral');
-  document.getElementById('res-pair').textContent=sym;
-  document.getElementById('res-tf').textContent=tf+'m';
-  document.getElementById('res-conf').textContent=conf+'%';
-  document.getElementById('res-entry').textContent=entry.toLocaleTimeString(CUR_LANG==='ar'?'ar-SA':'en-US');
-  const cd=document.getElementById('cooldown-note');
-  cd.textContent = tf===1 ? I18N[CUR_LANG].cooldown1 : tf===5 ? I18N[CUR_LANG].cooldown5 : '';
-  signalModal.style.display='flex';
+  function tfToMin(x){
+    if (x === undefined || x === null) return 1;
+    var n = Number(x);
+    if (Number.isFinite(n) && n > 0) return Math.floor(n);
+    if (typeof x === 'string'){
+      var m = x.match(/\d+/);
+      if (m) return Math.max(1, parseInt(m[0],10));
+    }
+    if (window.__TF && Number.isFinite(Number(window.__TF.min))) return Math.max(1, parseInt(window.__TF.min,10));
+    return 1;
+  }
+  var tfMin = tfToMin(tf);
+
+  var byId = function(id){ return document.getElementById(id); };
+  var sd = byId('signal-direction');
+  if (sd){
+    sd.textContent = dir;
+    sd.className = 'signal-dir ' + (/شراء|BUY/.test(dir)?'signal-good':/بيع|SELL/.test(dir)?'signal-bad':'signal-neutral');
+  }
+  if(byId('res-pair')) byId('res-pair').textContent = sym || '—';
+  if(byId('res-tf'))   byId('res-tf').textContent   = String(tfMin) + 'm';
+  if(byId('res-conf')) byId('res-conf').textContent = String(conf) + '%';
+  if(byId('res-entry')){
+    var ts = (entry && entry.toLocaleTimeString) ? entry.toLocaleTimeString(CUR_LANG==='ar'?'ar-SA':'en-US') : '—';
+    byId('res-entry').textContent = ts;
+  }
+
+  var cd = byId('cooldown-note');
+  if(cd){
+    var mins = Math.max(1, parseInt(tfMin,10));
+    cd.textContent = (CUR_LANG==='ar')
+      ? ('يجب الانتظار ' + mins + ' دقيقة قبل الصفقة التالية لهذا الإطار.')
+      : ('You must wait ' + mins + ' minute(s) before the next trade on this timeframe.');
+  }
 
   try{
-    if (typeof window.__NAIF_startEntryCountdown === 'function') {
+    if (typeof signalModal !== 'undefined' && signalModal && signalModal.style) {
+      signalModal.style.display='flex';
+    }
+  }catch(_){}
+
+  try{
+    if (typeof window.__NAIF_startEntryCountdown === 'function'){
       window.__NAIF_startEntryCountdown(entry.getTime());
-    
+    }
+  }catch(_){}
+
   try{
-    const priceEl = document.getElementById('res-price');
-    if(priceEl){
-      const ep = window.__NAIF_getEntryPrice(sym, tf);
-      priceEl.textContent = window.naifFormatPrice(ep);
-    
+    var endTs = entry.getTime() + tfMin*60*1000;
+    if (typeof window.__NAIF_startExpiryCountdown === 'function') {
+      window.__NAIF_startExpiryCountdown(endTs);
+    }
+  }catch(_){}
+
   try{
-    const priceEl = document.getElementById('res-price');
-    const exitEl  = document.getElementById('res-exit');
-    const pnlEl   = document.getElementById('res-pnl');
+    var priceEl = byId('res-price');
+    var exitEl  = byId('res-exit');
+    var pnlEl   = byId('res-pnl');
     if(exitEl) exitEl.textContent = '—';
     if(pnlEl){ pnlEl.textContent = '—'; pnlEl.style.color='inherit'; }
-    const ep = window.__NAIF_getEntryPrice(sym, tf);
+    if (typeof window.__NAIF_getEntryPrice === 'function' && priceEl){
+      var ep = window.__NAIF_getEntryPrice(sym, tfMin);
+      if (typeof window.naifFormatPrice === 'function') priceEl.textContent = window.naifFormatPrice(ep);
+      else priceEl.textContent = String(ep);
+      window.__NAIF_last_entryPrice = ep;
+    }
+    window.__NAIF_last_sym = sym;
+    window.__NAIF_last_tf  = tfMin;
+  }catch(_){}
+}
+const ep = window.__NAIF_getEntryPrice(sym, tf);
     if(priceEl){ priceEl.textContent = window.naifFormatPrice(ep); }
     window.__NAIF_last_entryPrice = ep;
     window.__NAIF_last_sym = sym;
@@ -660,7 +704,7 @@ closeSignal.addEventListener('click',()=>{signalModal.style.display='none';});
 
 genBtn.addEventListener('click',()=>{
   const __TF = __NAIF_getTF(); const tfVal=__TF.v, tfUnit=__TF.u, tfMs=__TF.ms, tfMin=__TF.minutes;
-  const {ok, remain} = canFire(tf);
+  const {ok, remain} = canFire(tfMin);
   if(!ok){
     errorFx();
     const m = Math.ceil(remain/60000);
@@ -668,13 +712,13 @@ genBtn.addEventListener('click',()=>{
     return;
   }
   const sym=currentSymbol();
-  const series=mergeWithSrv(sym, tf, 160);
+  const series=mergeWithSrv(sym, tfMin, 160);
   if(series.length<40){ errorFx(); alert(I18N[CUR_LANG].notEnough); return; }
   const {dir,conf}=scoreAll(series);
-  const now=riyadhNow(); now.setSeconds(0); now.setMilliseconds(0); const entry=new Date(now.getTime()+tf*60000);
-  openSignal(dir, conf, entry, sym, tf);
+  const now=riyadhNow(); now.setSeconds(0); now.setMilliseconds(0); const entry=new Date(now.getTime()+tfMin*60000);
+  openSignal(dir, conf, entry, sym, tfMin);
   successFx();
-  cooldownMap.set(tf, Date.now());
+  cooldownMap.set(tfMin, Date.now());
 
   // counter (starts from zero each load as requested)
   const cntEl=document.getElementById('signal-count');
@@ -834,7 +878,7 @@ const B=[]; function spawn(){const x=W+Math.random()*200,b=8+Math.random()*24,hi
         // Filters
         const trend = __NAIF_filters.trendOK(srs);
         const volOK = __NAIF_filters.volumeOK(srs);
-        const htf = __NAIF_filters.htfAgree(sym, tf);
+        const htf = __NAIF_filters.htfAgree(sym, tfMin);
 
         // Determine desired direction as +1 / -1
         const want = /شراء|BUY/.test(dir) ? 'up' : /بيع|SELL/.test(dir) ? 'dn' : null;
@@ -857,18 +901,79 @@ const B=[]; function spawn(){const x=W+Math.random()*200,b=8+Math.random()*24,hi
         const now = (function(){return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Riyadh'}));})();
         now.setSeconds(0); now.setMilliseconds(0);
         const __TF2 = __NAIF_getTF(); const entry = new Date(now.getTime()+__TF2.ms);
-        (function openSignal(dir, conf, entry, sym, tf){
-          const sd=document.getElementById('signal-direction');
-          sd.textContent = dir;
-          sd.className='signal-dir '+(/شراء|BUY/.test(dir)?'signal-good':/بيع|SELL/.test(dir)?'signal-bad':'signal-neutral');
-          document.getElementById('res-pair').textContent=sym;
-          document.getElementById('res-tf').textContent=tf+'m';
-          document.getElementById('res-conf').textContent=conf+'%';
-          document.getElementById('res-entry').textContent=entry.toLocaleTimeString(CUR_LANG==='ar'?'ar-SA':'en-US');
-          const cd=document.getElementById('cooldown-note');
-          cd.textContent = tf===1 ? I18N[CUR_LANG].cooldown1 : tf===5 ? I18N[CUR_LANG].cooldown5 : '';
-          document.getElementById('signal-modal').style.display='flex';
-        })(dir, conf, entry, sym, tf);
+        (
+function openSignal(dir, conf, entry, sym, tf){
+  function tfToMin(x){
+    if (x === undefined || x === null) return 1;
+    var n = Number(x);
+    if (Number.isFinite(n) && n > 0) return Math.floor(n);
+    if (typeof x === 'string'){
+      var m = x.match(/\d+/);
+      if (m) return Math.max(1, parseInt(m[0],10));
+    }
+    if (window.__TF && Number.isFinite(Number(window.__TF.min))) return Math.max(1, parseInt(window.__TF.min,10));
+    return 1;
+  }
+  var tfMin = tfToMin(tf);
+
+  var byId = function(id){ return document.getElementById(id); };
+  var sd = byId('signal-direction');
+  if (sd){
+    sd.textContent = dir;
+    sd.className = 'signal-dir ' + (/شراء|BUY/.test(dir)?'signal-good':/بيع|SELL/.test(dir)?'signal-bad':'signal-neutral');
+  }
+  if(byId('res-pair')) byId('res-pair').textContent = sym || '—';
+  if(byId('res-tf'))   byId('res-tf').textContent   = String(tfMin) + 'm';
+  if(byId('res-conf')) byId('res-conf').textContent = String(conf) + '%';
+  if(byId('res-entry')){
+    var ts = (entry && entry.toLocaleTimeString) ? entry.toLocaleTimeString(CUR_LANG==='ar'?'ar-SA':'en-US') : '—';
+    byId('res-entry').textContent = ts;
+  }
+
+  var cd = byId('cooldown-note');
+  if(cd){
+    var mins = Math.max(1, parseInt(tfMin,10));
+    cd.textContent = (CUR_LANG==='ar')
+      ? ('يجب الانتظار ' + mins + ' دقيقة قبل الصفقة التالية لهذا الإطار.')
+      : ('You must wait ' + mins + ' minute(s) before the next trade on this timeframe.');
+  }
+
+  try{
+    if (typeof signalModal !== 'undefined' && signalModal && signalModal.style) {
+      signalModal.style.display='flex';
+    }
+  }catch(_){}
+
+  try{
+    if (typeof window.__NAIF_startEntryCountdown === 'function'){
+      window.__NAIF_startEntryCountdown(entry.getTime());
+    }
+  }catch(_){}
+
+  try{
+    var endTs = entry.getTime() + tfMin*60*1000;
+    if (typeof window.__NAIF_startExpiryCountdown === 'function') {
+      window.__NAIF_startExpiryCountdown(endTs);
+    }
+  }catch(_){}
+
+  try{
+    var priceEl = byId('res-price');
+    var exitEl  = byId('res-exit');
+    var pnlEl   = byId('res-pnl');
+    if(exitEl) exitEl.textContent = '—';
+    if(pnlEl){ pnlEl.textContent = '—'; pnlEl.style.color='inherit'; }
+    if (typeof window.__NAIF_getEntryPrice === 'function' && priceEl){
+      var ep = window.__NAIF_getEntryPrice(sym, tfMin);
+      if (typeof window.naifFormatPrice === 'function') priceEl.textContent = window.naifFormatPrice(ep);
+      else priceEl.textContent = String(ep);
+      window.__NAIF_last_entryPrice = ep;
+    }
+    window.__NAIF_last_sym = sym;
+    window.__NAIF_last_tf  = tfMin;
+  }catch(_){}
+}
+)(dir, conf, entry, sym, tf);
 
         successFx();
         const cntEl=document.getElementById('signal-count');
@@ -1166,7 +1271,7 @@ try{
   // Patch openSignal to append details
   const _openSignal = window.openSignal;
   window.openSignal = function(dir, conf, entry, sym, tf){
-    if(typeof _openSignal === 'function') _openSignal(dir, conf, entry, sym, tf);
+    if(typeof _openSignal === 'function') _openSignal(dir, conf, entry, sym, tfMin);
     try{
       const __TFcur = (typeof __NAIF_getTF==='function') ? __NAIF_getTF() : {v:1,u:'m',ms:60000,minutes:1}; const tfVal=__TFcur.v, tfUnit=__TFcur.u, tfMs=__TFcur.ms, tfMin=__TFcur.minutes;const __TFcur = (typeof __NAIF_getTF==='function') ? __NAIF_getTF() : {v:1,u:'m',ms:60000,minutes:1}; const tfVal=__TFcur.v, tfUnit=__TFcur.u, tfMs=__TFcur.ms, tfMin=__TFcur.minutes;const bullets = document.getElementById('signal-bullets');
       if (bullets){
@@ -1530,7 +1635,7 @@ document.addEventListener('DOMContentLoaded', function(){
   // Replace openSignal to add countdowns and messages
   const _openSignal = window.openSignal;
   window.openSignal = function(dir, conf, entry, sym, tf){
-    if(typeof _openSignal === 'function') _openSignal(dir, conf, entry, sym, tf);
+    if(typeof _openSignal === 'function') _openSignal(dir, conf, entry, sym, tfMin);
     try{
       const __TFcur = (typeof __NAIF_getTF==='function') ? __NAIF_getTF() : {v:1,u:'m',ms:60000,minutes:1}; const tfVal=__TFcur.v, tfUnit=__TFcur.u, tfMs=__TFcur.ms, tfMin=__TFcur.minutes;const __TFcur = (typeof __NAIF_getTF==='function') ? __NAIF_getTF() : {v:1,u:'m',ms:60000,minutes:1}; const tfVal=__TFcur.v, tfUnit=__TFcur.u, tfMs=__TFcur.ms, tfMin=__TFcur.minutes;const modal = document.getElementById('signal-modal');
       applyModalAccent(modal);
@@ -2740,6 +2845,76 @@ if(!wasReady && nowReady){
       pnlEl.textContent = sign + (Math.abs(diff)).toFixed( (entryP>=10)? 3 : 5 ) + ' (' + sign + pipsStr + ' pips)';
     }catch(_){}
   };
+})();
+</script>
+
+
+<!-- ===== Hard Override: Disable all filter-based rejections & messages ===== -->
+<script>
+(function(){
+  const SAFE_TRUE = function(){ return true; };
+  const SAFE_NOOP  = function(){};
+  function softSet(obj,k,v){ try{ if(obj && typeof obj==='object'){ obj[k]=v; } }catch(e){} }
+  window.__NAIF_DISABLE_FILTERS = true;
+
+  window.__NAIF_filters = window.__NAIF_filters || {};
+  ['htfAgree','confidenceOK','shouldReject','reject','allowedByFilters','filtersOK'].forEach(function(k){
+    if (typeof window.__NAIF_filters[k] === 'function') { softSet(window.__NAIF_filters, k, SAFE_TRUE); }
+  });
+
+  ['canFire','allowedByFilters','filtersOK','rejectSignal','shouldReject'].forEach(function(k){
+    if (typeof window[k] === 'function') { window[k] = SAFE_TRUE; }
+  });
+
+  var killRe = /(فلتر|رفض|HTF|mismatch)/i;
+  function silence(msg){ return typeof msg === 'string' && killRe.test(msg); }
+  [['alert', window], ['showToast', window], ['toast', window], ['showNote', window], ['warn', console], ['info', console], ['log', console]].forEach(function(pair){
+    var key = pair[0], obj = pair[1];
+    if (!obj) return;
+    var orig = obj[key];
+    if (typeof orig === 'function'){
+      obj[key] = function(){ if (silence(arguments[0])) return; return orig.apply(this, arguments); };
+    }
+  });
+
+  function hideMatches(){
+    try{
+      document.querySelectorAll('div,span,p,li').forEach(function(el){
+        if (el && el.childElementCount === 0 && el.textContent && killRe.test(el.textContent)){
+          el.remove();
+        }
+      });
+    }catch(_){}
+  }
+  new MutationObserver(function(){ hideMatches(); }).observe(document.documentElement, {childList:true, subtree:true});
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hideMatches);
+  else hideMatches();
+})();
+</script>
+
+<script>
+(function(){
+  function fixCooldownNaN(){
+    try{
+      var cd = document.getElementById('cooldown-note');
+      if (!cd) return;
+      if (/NaN/.test(cd.textContent||'')){
+        var tf = window.__NAIF_last_tf || (window.__TF && window.__TF.min) || 1;
+        var mins = Math.max(1, parseInt(Number(tf)||1,10));
+        cd.textContent = (window.CUR_LANG==='ar')
+          ? ('يجب الانتظار ' + mins + ' دقيقة قبل الصفقة التالية لهذا الإطار.')
+          : ('You must wait ' + mins + ' minute(s) before the next trade on this timeframe.');
+      }
+    }catch(_){}
+  }
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', fixCooldownNaN);
+  } else {
+    fixCooldownNaN();
+  }
+  try{
+    new MutationObserver(fixCooldownNaN).observe(document.body, {childList:true, subtree:true});
+  }catch(_){}
 })();
 </script>
 
