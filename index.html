@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>NAIF TRADING BOT VIP— PocketOption</title>
+<title>NAIF TRADING BOT — pocketoption</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
@@ -125,26 +125,6 @@
 /* التحليل حقيقي: يعتمد على بيانات الخادم عبر mergeWithSrv() وحساب scoreAll() مع فلاتر الاتجاه/الفوليوم/MTF. لا توجد أي عشوائية. */
 
 </style>
-
-<style id="naif-compact-ui">
-  /* Compact modal width + spacing */
-  #signal-modal .modal-box{ width:min(94vw, 360px) !important; max-width:360px !important; margin:6vh auto !important; border-radius:12px; }
-  /* KPI typography */
-  #signal-modal .tile .kpi{ font-size: clamp(13px, 2vw, 16px); }
-  #signal-modal .tile .mini{ font-size: 10px; opacity:.9; }
-  /* MTF details responsiveness */
-  #mtf-details{ max-height: 32vh; overflow:auto; }
-  #mtf-details .table-wrap{ max-width: 100%; overflow: auto; }
-  #mtf-table th, #mtf-table td{ padding: 4px; }
-  #mtf-mini-chart > div{ min-width: 44px; padding: 4px 6px; font-size: 11px; }
-  /* Progress text sizing */
-  #bars-progress .bars-text{ font-size: 11px; }
-  /* Small screens */
-  @media (max-width: 420px){
-    #signal-modal .modal-box{ width:min(94vw, 360px) !important; max-width:360px !important; margin:6vh auto !important; border-radius:12px; }
-  }
-</style>
-
 </head>
 <body>
 <div id="naif-circle" class="naif-circle"><div class="naif-text">NAIF</div><div class="wave"></div></div>
@@ -215,7 +195,7 @@
   <div class="section">
     <div class="section-title"><span><i class="fas fa-chart-line"></i> <span data-i18n="marketType">نوع السوق</span></span><span class="section-info">live/otc</span></div>
     <div class="time-options" id="market-switch">
-      <div class="time-btn selected" data-market="live" data-i18n="live">مباشر</div>
+      <div class="time-btn selected" data-market="live" data-i18n="live">حي</div>
       <div class="time-btn" data-market="otc">OTC</div>
     </div>
   </div>
@@ -256,50 +236,7 @@
       <div class="tile"><div class="mini" data-i18n="asset">الزوج/الأصل</div><div class="kpi" id="res-pair">—</div></div>
       <div class="tile"><div class="mini" data-i18n="timeframe">الإطار</div><div class="kpi" id="res-tf">—</div></div>
       <div class="tile"><div class="mini" data-i18n="strength">القوة</div><div class="kpi" id="res-conf">—</div></div>
-    <div id="signal-warning" style="margin-top:10px;display:flex;align-items:center;gap:8px;">
-      <span id="warn-dot" style="width:10px;height:10px;border-radius:50%;background:#9ca3af;display:inline-block;"></span>
-      <span id="warn-text" style="font-size:12px;opacity:.9;">—</span>
-    </div>
-<div class="mtf-actions" style="margin-top:8px;">
-  <button type="button" class="btn" id="mtf-toggle" style="padding:6px 10px;font-size:12px;">
-    <span data-i18n="mtfDetails">تفاصيل MTF</span>
-  </button>
-</div>
-<div id="mtf-details" style="display:none;margin-top:8px;border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:8px;">
-  <div id="mtf-summary" style="font-size:12px;opacity:.9;margin-bottom:6px;">—</div>
-  <div id="mtf-final" style="font-size:13px;margin:6px 0 8px 0;opacity:.95;">—</div>
-  <div id="mtf-mini-chart" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">
-    <!-- boxes injected here -->
-  </div>
-
-  <div class="table-wrap" style="overflow:auto;">
-    <table id="mtf-table" style="width:100%;border-collapse:collapse;font-size:12px;">
-      <thead>
-        <tr>
-          <th style="text-align:left;padding:6px;border-bottom:1px solid rgba(255,255,255,.12);">TF</th>
-          <th style="text-align:left;padding:6px;border-bottom:1px solid rgba(255,255,255,.12);" data-i18n="direction">الاتجاه</th>
-          <th style="text-align:left;padding:6px;border-bottom:1px solid rgba(255,255,255,.12);" data-i18n="strength">القوة</th>
-          <th style="text-align:left;padding:6px;border-bottom:1px solid rgba(255,255,255,.12);">Weight</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-</div>
-
-    
       <div class="tile"><div class="mini" data-i18n="entryAt">الدخول عند</div><div class="kpi" id="res-entry">—</div></div>
-<div class="tile">
-  <div class="mini">سعر الدخول</div>
-  <div class="kpi" id="res-price">—</div>
-</div>
-<div class="tile">
-  <div class="mini">سعر الخروج</div>
-  <div class="kpi" id="res-exit"
->—</div>
-</div>
-
-
     </div>
     <div class="note" id="cooldown-note"></div>
     <button type=\"button\" class="btn" id="close-signal"><i class="fas fa-check"></i> <span data-i18n="ok">تم</span></button>
@@ -403,7 +340,7 @@ function naifMinBarsByTF(tfMinutes){
 
 const I18N={
   ar: {
-    appName:"NAIF TRADING BOT VIP",
+    appName:"NAIF TRADING BOT",
     riyadhTime:"توقيت الرياض",
     signalsCount:"عدد الإشارات",
     livePrice:"السعر اللحظي",
@@ -416,7 +353,7 @@ const I18N={
     licenseHint:"يمكن النسخ/اللصق داخل حقل السيريال فقط",
     activate:"تفعيل",
     ok:"تم",
-    live:"سوق حقيقي",
+    live:"حي",
     notEnough:"لا توجد بيانات كافية بعد.",
     strength:"القوة",
     entryAt:"الدخول عند",
@@ -443,7 +380,7 @@ const I18N={
     tipSignal:"هذه الإشارة مُولّدة وفق تحليل المؤشرات + الفوليوم + الاتجاه + التوافق متعدد الأطر. انتبه للمهلة بين الصفقات."
   },
   en: {
-    appName:"NAIF TRADING BOT VIP",
+    appName:"NAIF TRADING BOT",
     riyadhTime:"Riyadh Time",
     signalsCount:"Signals",
     livePrice:"Live Price",
@@ -599,114 +536,67 @@ document.getElementById('market-switch').addEventListener('click',e=>{const b=e.
 selPair.addEventListener('change',()=>{updateAssetDecor(currentSymbol()); sendPair(true);});
 document.querySelectorAll('#tf-options .time-btn').forEach(btn=>{btn.addEventListener('click',()=>{btn.parentElement.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('selected')); btn.classList.add('selected');});});
 
-
-/* ===== زر توليد إشارة مع كوول-داون خاص (مُصلَّح) ===== */
+/* ===== زر توليد إشارة مع كوول-داون خاص ===== */
 const genBtn=document.getElementById('generate-btn');
 const signalModal=document.getElementById('signal-modal');
 const closeSignal=document.getElementById('close-signal');
-
-// تبريد: لكل إطار زمني، تذكّر آخر وقت صفقة
 const cooldownMap=new Map(); // key: tf minutes -> last timestamp
-
-function canFire(tfMin){
+function canFire(tf){
   const now=Date.now();
-  const last=cooldownMap.get(tfMin)||0;
+  const last=cooldownMap.get(tf)||0;
   let gap=0;
-  if(tfMin===1) gap=3*60000;      // 3 دقائق بعد صفقة الدقيقة
-  else if(tfMin===5) gap=5*60000; // 5 دقائق بعد صفقة 5 دقائق
-  else gap=0;
+  if(tf===1) gap=3*60000;        // 3 دقائق
+  else if(tf===5) gap=5*60000;   // 5 دقائق
+  else gap=0;                    // "الباقي نفسها" = بدون تغيير
   return {ok: now-last>=gap, remain: Math.max(0, gap-(now-last))};
 }
-
-function naifFormatPrice(val){
-  try{
-    const sym = currentSymbol();
-    if(!isFinite(val)) return '—';
-    return (/JPY\b/.test(sym)? val.toFixed(3) : (val>=100? val.toFixed(2) : val.toFixed(5)));
-  }catch(_){ return '—'; }
-}
-
-function openSignal(dir, conf, entry, sym, tfMin){
+function openSignal(dir, conf, entry, sym, tf){
   const sd=document.getElementById('signal-direction');
   sd.textContent = dir;
   sd.className='signal-dir '+(/شراء|BUY/.test(dir)?'signal-good':/بيع|SELL/.test(dir)?'signal-bad':'signal-neutral');
   document.getElementById('res-pair').textContent=sym;
-  document.getElementById('res-tf').textContent=tfMin+'m';
+  document.getElementById('res-tf').textContent=tf+'m';
   document.getElementById('res-conf').textContent=conf+'%';
   document.getElementById('res-entry').textContent=entry.toLocaleTimeString(CUR_LANG==='ar'?'ar-SA':'en-US');
-
-  // سعر الدخول/الخروج مبدئيًا
-  try{
-    const priceEl = document.getElementById('res-price');
-    const exitEl  = document.getElementById('res-exit');
-    if(exitEl) exitEl.textContent = '—';
-
-    // حاول أخذ آخر سعر من شموع الخادم
-    const last = (window.srvCandles?.get(sym)||[]).slice(-1)[0];
-    const ep = last ? last.c : NaN;
-    if(priceEl) priceEl.textContent = naifFormatPrice(ep);
-    window.__NAIF_last_entryPrice = ep;
-    window.__NAIF_last_sym = sym;
-    window.__NAIF_last_tf  = tfMin;
-  }catch(_){}
-
   const cd=document.getElementById('cooldown-note');
-  if(cd){
-    cd.textContent = (tfMin===1 ? I18N[CUR_LANG].cooldown1 : tfMin===5 ? I18N[CUR_LANG].cooldown5 : '');
-  }
-
+  cd.textContent = tf===1 ? I18N[CUR_LANG].cooldown1 : tf===5 ? I18N[CUR_LANG].cooldown5 : '';
   signalModal.style.display='flex';
 
-  // عدّاد الوقت حتى الدخول/الانتهاء (اختياري إذا كانت دوال العدّادات موجودة)
   try{
-    if (typeof window.__NAIF_startEntryCountdown === 'function') window.__NAIF_startEntryCountdown(entry.getTime());
-    const endTs = entry.getTime() + (Number(tfMin)||1)*60*1000;
-    if (typeof window.__NAIF_startExpiryCountdown === 'function') window.__NAIF_startExpiryCountdown(endTs);
+    if (typeof window.__NAIF_startEntryCountdown === 'function') {
+      window.__NAIF_startEntryCountdown(entry.getTime());
+    }
+    const __endTs = entry.getTime() + (Number(tf)||1)*60*1000;
+    if (typeof window.__NAIF_startExpiryCountdown === 'function') {
+      window.__NAIF_startExpiryCountdown(__endTs);
+    }
   }catch(_){}
 }
+closeSignal.addEventListener('click',()=>{signalModal.style.display='none';});
 
-closeSignal?.addEventListener('click',()=>{ signalModal.style.display='none'; });
-
-genBtn?.addEventListener('click',()=>{
-  try{
-    const TF=__NAIF_getTF(); const tfMin=TF.minutes;
-    const {ok,remain}=canFire(tfMin);
-    if(!ok){
-      errorFx?.();
-      const m=Math.ceil(remain/60000);
-      alert(CUR_LANG==='ar' ? `يجب الانتظار ${m} دقيقة قبل الصفقة التالية لهذا الإطار.`
-                            : `Please wait ${m} minute(s) before the next trade for this timeframe.`);
-      return;
-    }
-    const sym=currentSymbol();
-    const need=naifMinBarsByTF ? naifMinBarsByTF(tfMin) : 40;
-    const series=mergeWithSrv(sym, tfMin, Math.max(160, need+10));
-    if(!series || series.length<Math.max(40, need)){
-      errorFx?.();
-      alert(I18N?.[CUR_LANG]?.notEnough || 'Not enough data yet.');
-      return;
-    }
-    const {dir,conf}=scoreAll(series);
-    const now=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Riyadh'}));
-    now.setSeconds(0); now.setMilliseconds(0);
-    const entry=new Date(now.getTime()+tfMin*60000);
-
-    openSignal(dir, conf, entry, sym, tfMin);
-    successFx?.();
-    cooldownMap.set(tfMin, Date.now());
-
-    // عدّاد الإشارات
-    const cntEl=document.getElementById('signal-count');
-    if(cntEl){
-      const n=(parseInt(cntEl.textContent||'0',10)||0)+1;
-      cntEl.textContent=n;
-    }
-  }catch(e){
-    errorFx?.();
-    alert('Unexpected error: '+(e?.message||e));
+genBtn.addEventListener('click',()=>{
+  const __TF = __NAIF_getTF(); const tfVal=__TF.v, tfUnit=__TF.u, tfMs=__TF.ms, tfMin=__TF.minutes;
+  const {ok, remain} = canFire(tf);
+  if(!ok){
+    errorFx();
+    const m = Math.ceil(remain/60000);
+    alert(CUR_LANG==='ar' ? `يجب الانتظار ${m} دقيقة قبل الصفقة التالية لهذا الإطار.` : `Please wait ${m} minute(s) before next trade for this timeframe.`);
+    return;
   }
-});
+  const sym=currentSymbol();
+  const series=mergeWithSrv(sym, tf, 160);
+  if(series.length<40){ errorFx(); alert(I18N[CUR_LANG].notEnough); return; }
+  const {dir,conf}=scoreAll(series);
+  const now=riyadhNow(); now.setSeconds(0); now.setMilliseconds(0); const entry=new Date(now.getTime()+tf*60000);
+  openSignal(dir, conf, entry, sym, tf);
+  successFx();
+  cooldownMap.set(tf, Date.now());
 
+  // counter (starts from zero each load as requested)
+  const cntEl=document.getElementById('signal-count');
+  const n=(parseInt(cntEl.textContent||'0',10)||0)+1;
+  cntEl.textContent=n;
+});
 
 /* ===== الترخيص (سيريال) ===== */
 // يبدأ عداد الإشارات من صفر (على كل تحميل)
@@ -860,7 +750,7 @@ const B=[]; function spawn(){const x=W+Math.random()*200,b=8+Math.random()*24,hi
         // Filters
         const trend = __NAIF_filters.trendOK(srs);
         const volOK = __NAIF_filters.volumeOK(srs);
-        const htf = true /* htfAgree disabled */;
+        const htf = __NAIF_filters.htfAgree(sym, tf);
 
         // Determine desired direction as +1 / -1
         const want = /شراء|BUY/.test(dir) ? 'up' : /بيع|SELL/.test(dir) ? 'dn' : null;
@@ -875,7 +765,40 @@ const B=[]; function spawn(){const x=W+Math.random()*200,b=8+Math.random()*24,hi
           if(!volOK) reasons.push(CUR_LANG==='ar'?'حجم ضعيف':'Low volume');
           if(!trendPass) reasons.push(CUR_LANG==='ar'?'اتجاه غير مناسب':'Trend mismatch');
           if(!htfPass) reasons.push(CUR_LANG==='ar'?'عدم توافق مع إطار أعلى':'No HTF agreement');
-          alert((CUR_LANG==='ar'?'تنبيه: تم تجاهل فلتر الإطار الأعلى حسب الإعداد.</script>
+          alert((CUR_LANG==='ar'?'فلتر رفض الإشارة: ':'Signal filtered: ')+reasons.join(' + '));
+          return;
+        }
+
+        // Passed filters -> open modal and success sound
+        const now = (function(){return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Riyadh'}));})();
+        now.setSeconds(0); now.setMilliseconds(0);
+        const __TF2 = __NAIF_getTF(); const entry = new Date(now.getTime()+__TF2.ms);
+        (function openSignal(dir, conf, entry, sym, tf){
+          const sd=document.getElementById('signal-direction');
+          sd.textContent = dir;
+          sd.className='signal-dir '+(/شراء|BUY/.test(dir)?'signal-good':/بيع|SELL/.test(dir)?'signal-bad':'signal-neutral');
+          document.getElementById('res-pair').textContent=sym;
+          document.getElementById('res-tf').textContent=tf+'m';
+          document.getElementById('res-conf').textContent=conf+'%';
+          document.getElementById('res-entry').textContent=entry.toLocaleTimeString(CUR_LANG==='ar'?'ar-SA':'en-US');
+          const cd=document.getElementById('cooldown-note');
+          cd.textContent = tf===1 ? I18N[CUR_LANG].cooldown1 : tf===5 ? I18N[CUR_LANG].cooldown5 : '';
+          document.getElementById('signal-modal').style.display='flex';
+        })(dir, conf, entry, sym, tf);
+
+        successFx();
+        const cntEl=document.getElementById('signal-count');
+        const n=(parseInt(cntEl.textContent||'0',10)||0)+1; cntEl.textContent=n;
+
+      }catch(err){
+        console.error(err);
+        errorFx();
+        naifShowError(CUR_LANG==='ar'?'خطأ غير متوقع':'Unexpected', CUR_LANG==='ar'?'حدث خطأ غير متوقع.':'Unexpected error.');
+      }
+    }, {capture:false});
+  })();
+})();
+</script>
 
 
 <script>
@@ -1159,7 +1082,7 @@ try{
   // Patch openSignal to append details
   const _openSignal = window.openSignal;
   window.openSignal = function(dir, conf, entry, sym, tf){
-    if(typeof _openSignal === 'function') _openSignal(dir, conf, entry, sym, tfMin);
+    if(typeof _openSignal === 'function') _openSignal(dir, conf, entry, sym, tf);
     try{
       const __TFcur = (typeof __NAIF_getTF==='function') ? __NAIF_getTF() : {v:1,u:'m',ms:60000,minutes:1}; const tfVal=__TFcur.v, tfUnit=__TFcur.u, tfMs=__TFcur.ms, tfMin=__TFcur.minutes;const __TFcur = (typeof __NAIF_getTF==='function') ? __NAIF_getTF() : {v:1,u:'m',ms:60000,minutes:1}; const tfVal=__TFcur.v, tfUnit=__TFcur.u, tfMs=__TFcur.ms, tfMin=__TFcur.minutes;const bullets = document.getElementById('signal-bullets');
       if (bullets){
@@ -1523,7 +1446,7 @@ document.addEventListener('DOMContentLoaded', function(){
   // Replace openSignal to add countdowns and messages
   const _openSignal = window.openSignal;
   window.openSignal = function(dir, conf, entry, sym, tf){
-    if(typeof _openSignal === 'function') _openSignal(dir, conf, entry, sym, tfMin);
+    if(typeof _openSignal === 'function') _openSignal(dir, conf, entry, sym, tf);
     try{
       const __TFcur = (typeof __NAIF_getTF==='function') ? __NAIF_getTF() : {v:1,u:'m',ms:60000,minutes:1}; const tfVal=__TFcur.v, tfUnit=__TFcur.u, tfMs=__TFcur.ms, tfMin=__TFcur.minutes;const __TFcur = (typeof __NAIF_getTF==='function') ? __NAIF_getTF() : {v:1,u:'m',ms:60000,minutes:1}; const tfVal=__TFcur.v, tfUnit=__TFcur.u, tfMs=__TFcur.ms, tfMin=__TFcur.minutes;const modal = document.getElementById('signal-modal');
       applyModalAccent(modal);
@@ -1531,7 +1454,7 @@ document.addEventListener('DOMContentLoaded', function(){
       // Show cooldown message: wait 1 minute before next signal for this TF
       const cd = document.getElementById('cooldown-note');
       if(cd){
-        var mins = Math.max(1, parseInt(Number(tf)||1,10));
+        var mins = tfMin;
         cd.textContent = (function(){ if (CUR_LANG==='ar'){ return (tfUnit==='s' ? ('يجب الانتظار ' + (tfVal) + ' ثانية قبل الصفقة التالية لهذا الإطار.') : ('يجب الانتظار ' + mins + ' دقيقة قبل الصفقة التالية لهذا الإطار.')); } else { return (tfUnit==='s' ? ('You must wait ' + tfVal + ' second(s) before the next trade on this timeframe.') : ('You must wait ' + mins + ' minute(s) before the next trade on this timeframe.')); } })();
       }
 
@@ -1793,49 +1716,8 @@ const srs = (typeof mergeWithSrv==='function') ? mergeWithSrv(sym, TF.minutes, M
 if(!srs || srs.length < need){ naifShowError(`لا توجد بيانات كافية (${srs ? srs.length : 0}/${need}).`); return; }
 const out = (typeof scoreAll==='function') ? scoreAll(srs) : {dir:'HOLD', conf:0};
 const dir = out.dir; const conf = out.conf;
-(function(){
-  // Multi‑timeframe + Volume fusion
-  try{
-    const baseTF = TF.minutes||1;
-    let finalDir = dir, finalConf = conf;
-
-    // MTF composite
-    const mtf = (typeof __NAIF_mtfComposite==='function') ? __NAIF_mtfComposite(sym, baseTF) : null;
-    if(mtf && mtf.conf){
-      // If MTF agrees with base signal, boost; if conflicts, dampen
-      if(mtf.dir===dir && mtf.dir!=='HOLD') finalConf = Math.min(100, Math.round((conf*0.6) + (mtf.conf*0.7)));
-      else if(mtf.dir!=='HOLD') { finalConf = Math.max(0, Math.round((conf*0.6) - (mtf.conf*0.5))); }
-      // adopt direction if base is HOLD
-      if(dir==='HOLD' && mtf.dir!=='HOLD'){ finalDir = mtf.dir; finalConf = Math.max(finalConf, mtf.conf-5); }
-    }
-
-    // Volume confirmation on base TF
-    const sBase = (typeof mergeWithSrv==='function') ? mergeWithSrv(sym, baseTF, Math.max(60, naifMinBarsByTF(baseTF)*2)) : null;
-    const vC = (typeof __NAIF_volumeConfirm==='function' && sBase) ? __NAIF_volumeConfirm(sBase) : {ok:false, ratio:0};
-    if(vC.ok && finalDir!=='HOLD'){ finalConf = Math.min(100, Math.round(finalConf * 1.12)); }
-
-    // Volatility warning
-    const volC = (typeof __NAIF_volatilityCheck==='function' && sBase) ? __NAIF_volatilityCheck(sBase) : {choppy:false, score:0};
-
-    // Clamp
-    finalConf = Math.max(0, Math.min(100, finalConf));
-
-    // Visual warnings
-    if(finalConf >= 70 && !volC.choppy){
-      __NAIF_renderWarning({level:'green', msg: (CUR_LANG==='ar'?'جودة إشارة مرتفعة':'High‑quality signal') + (vC.ok?' · Vol↑':'')});
-    }else if(finalConf >= 50){
-      __NAIF_renderWarning({level:'yellow', msg: (CUR_LANG==='ar'?'إشارة متوسطة':'Medium signal') + (volC.choppy?' · Choppy':'')});
-    }else{
-      __NAIF_renderWarning({level:'red', msg: (CUR_LANG==='ar'?'إشارة ضعيفة':'Weak signal') + (volC.choppy?' · Choppy':'')});
-    }
-
-    // Call openSignal with adjusted values
-    window.__NAIF_last_mtf=mtf; window.__NAIF_last_baseTF=TF.minutes; window.__NAIF_last_finalDir=finalDir; window.__NAIF_last_finalConf=finalConf; openSignal(finalDir, finalConf, entry, sym, TF.minutes);
-  }catch(e){
-    console.error('MTF+Volume handler error', e);
-    try{ openSignal(dir, conf, entry, sym, TF.minutes); }catch(_){}
-  }
-})();}catch(e){
+openSignal(dir, conf, entry, sym, TF.minutes);
+}catch(e){
       console.error("Generate error", e);
       naifShowError("Error", e.message||"Unexpected");
     }
@@ -2342,445 +2224,6 @@ if(!wasReady && nowReady){
   document.getElementById('currency-pair')?.addEventListener('change', updateBarsProgress);
   document.getElementById('market-switch')?.addEventListener('click', updateBarsProgress);
   document.getElementById('timeframe')?.addEventListener('change', updateBarsProgress);
-})();
-</script>
-
-
-<script>
-(function(){
-  // ===== Utilities =====
-  function ema(arr, p){
-    if(!arr || arr.length===0) return [];
-    const k = 2/(p+1);
-    let e = arr[0];
-    const out = [e];
-    for(let i=1;i<arr.length;i++){ e = arr[i]*k + e*(1-k); out.push(e); }
-    return out;
-  }
-  function sma(arr, p){
-    const out=[]; let s=0;
-    for(let i=0;i<arr.length;i++){
-      s += arr[i];
-      if(i>=p) s -= arr[i-p];
-      if(i>=p-1) out.push(s/p);
-      else out.push(null);
-    }
-    return out;
-  }
-  function trSeries(series){
-    // True Range proxy
-    const out=[0];
-    for(let i=1;i<series.length;i++){
-      const a = series[i].h - series[i].l;
-      const b = Math.abs(series[i].h - series[i-1].c);
-      const c = Math.abs(series[i].l - series[i-1].c);
-      out.push(Math.max(a,b,c));
-    }
-    return out;
-  }
-  function stdev(arr, p){
-    const out=[];
-    for(let i=0;i<arr.length;i++){
-      const s = Math.max(0, i-p+1);
-      const win = arr.slice(s,i+1);
-      const mean = win.reduce((a,b)=>a+b,0)/win.length;
-      const v = Math.sqrt(win.reduce((a,b)=>a+(b-mean)*(b-mean),0)/win.length);
-      out.push(v);
-    }
-    return out;
-  }
-
-  // ===== Build candles for a given timeframe, using existing mergeWithSrv() =====
-  window.__NAIF_buildCandles = function(symbol, tfMin, want=220){
-    try{
-      if(typeof mergeWithSrv!=='function') return null;
-      const srs = mergeWithSrv(symbol, tfMin, want);
-      return (srs && srs.length) ? srs : null;
-    }catch(_){ return null; }
-  };
-
-  // ===== Volume analysis =====
-  // Uses candle.v if present; else falls back to tick-count proxy via candle._ticks or TR proxy (scaled)
-  function extractVolume(series){
-    return series.map(c => {
-      if(typeof c.v === 'number') return c.v;
-      if(typeof c._ticks === 'number') return c._ticks;
-      // TR proxy scaled to price magnitude
-      const range = (c.h - c.l);
-      return Math.max(0, range);
-    });
-  }
-  window.__NAIF_volumeConfirm = function(series){
-    if(!series || series.length < 20) return {ok:false, ratio:0};
-    const v = extractVolume(series);
-    const vMA = sma(v, 20);
-    const n = v.length - 1;
-    const ratio = v[n] / (vMA[n] || (vMA[n-1]||1));
-    return { ok: ratio >= 1.25, ratio: ratio };
-  };
-
-  // ===== Volatility warning (market choppiness) =====
-  window.__NAIF_volatilityCheck = function(series){
-    if(!series || series.length < 30) return {choppy:false, score:0};
-    const rets = [];
-    for(let i=1;i<series.length;i++){ rets.push((series[i].c - series[i-1].c)/Math.max(1e-9, series[i-1].c)); }
-    const sd = stdev(rets, 20).pop() || 0;
-    // normalize to a simple 0..1 scale
-    const score = Math.min(1, Math.max(0, sd*500)); // heuristic scaling
-    return { choppy: score > 0.6, score };
-  };
-
-  // ===== Multi‑timeframe composite =====
-  // Runs scoreAll() on 1m + 5m + 15m; 60m provides context bias. Aggregates confidence and aligns direction.
-  window.__NAIF_mtfComposite = function(symbol, baseTF){
-    try{
-      if(typeof scoreAll!=='function' || typeof mergeWithSrv!=='function') return null;
-      const want = 240;
-      const TFs = [1, 5, 15];
-      const res = {};
-      let ctx60 = null;
-      try{
-        const s60 = mergeWithSrv(symbol, 60, want);
-        if(s60 && s60.length >= 40){
-          const r60 = scoreAll(s60);
-          ctx60 = r60 && r60.dir || null;
-        }
-      }catch(_){}
-
-      let totalW=0, sumConf=0, votes={BUY:0, SELL:0, HOLD:0};
-      const details = [];
-      for(const tf of TFs){
-        const s = mergeWithSrv(symbol, tf, want);
-        if(!s || s.length < 25) { details.push({tf, ok:false}); continue; }
-        const r = scoreAll(s);
-        if(!r || typeof r.conf!=='number' || !r.dir){ details.push({tf, ok:false}); continue; }
-        // weight: closer to baseTF gets more weight; and align with 60m adds bonus
-        let w = (tf===baseTF? 1.0 : tf===5? 0.85 : tf===15? 0.9 : 0.75);
-        if(ctx60 && r.dir===ctx60) w += 0.1;
-        totalW += w;
-        sumConf += r.conf * w;
-        votes[r.dir] = (votes[r.dir]||0) + w;
-        details.push({tf, ok:true, dir:r.dir, conf:r.conf, w});
-      }
-      const dir = (votes.BUY>votes.SELL? 'BUY' : votes.SELL>votes.BUY? 'SELL' : 'HOLD');
-      const conf = totalW>0 ? Math.round(sumConf/totalW) : 0;
-      return {dir, conf, details, ctx60};
-    }catch(e){
-      console.error('mtfComposite error', e); return null;
-    }
-  };
-
-  // ===== Visual warning renderer =====
-  window.__NAIF_renderWarning = function(opts){
-    const dot = document.getElementById('warn-dot');
-    const txt = document.getElementById('warn-text');
-    if(!dot || !txt) return;
-    const ar = (window.CUR_LANG==='ar');
-    const lvl = opts.level||'none'; // 'none' | 'yellow' | 'red' | 'green'
-    const msg = opts.msg || (ar?'—':'—');
-    let color = '#9ca3af';
-    if(lvl==='green') color = '#22c55e';
-    else if(lvl==='yellow') color = '#f59e0b';
-    else if(lvl==='red') color = '#ef4444';
-    dot.style.background = color;
-    txt.textContent = msg;
-  };
-})();
-</script>
-
-
-<script>
-(function(){
-  function badge(dir){
-    let bg='#9ca3af';
-    if(/BUY|شراء/i.test(dir)) bg='#22c55e';
-    else if(/SELL|بيع/i.test(dir)) bg='#ef4444';
-    else bg='#9ca3af';
-    return '<span style="display:inline-block;padding:2px 6px;border-radius:999px;background:'+bg+';color:white;font-weight:600;">'+dir+'</span>';
-  }
-  function fmtTF(m){ return (m>=60) ? (String(Math.round(m/60))+'h') : (String(m)+'m'); }
-  window.__NAIF_renderMTFDetails = function(mtf, baseTF){
-    try{
-      const box = document.getElementById('mtf-details');
-      const sum = document.getElementById('mtf-summary');
-      const tb  = document.querySelector('#mtf-table tbody');
-      if(!box || !sum || !tb){ return; }
-      tb.innerHTML='';
-      if(!mtf || !mtf.details){
-        sum.textContent = (window.CUR_LANG==='ar'?'تفاصيل غير متاحة':'No details available');
-        return;
-      }
-      const ar = (window.CUR_LANG==='ar');
-      const ctx = mtf.ctx60 ? (ar?'اتجاه 60 دقيقة: ':'60m context: ')+mtf.ctx60 : (ar?'لا يوجد اتجاه 60 دقيقة':'No 60m context');
-      sum.textContent = ctx + ' · ' + (ar?'TF الأساس: ':'Base TF: ')+fmtTF(baseTF||1);
-      const rows = [];
-      const order = [1,5,15];
-      for(const tf of order){
-        const d = mtf.details.find(x=>x.tf===tf && x.ok);
-        if(!d){ rows.push('<tr><td style="padding:6px">'+fmtTF(tf)+'</td><td style="padding:6px" colspan="3">—</td></tr>'); continue; }
-        rows.push(
-          '<tr>' +
-          '<td style="padding:6px">'+fmtTF(tf)+(tf===(baseTF||1)?' · <b>'+(ar?'الأساس':'base')+'</b>':'')+'</td>' +
-          '<td style="padding:6px">'+badge(d.dir)+'</td>' +
-          '<td style="padding:6px">'+(d.conf!=null? (d.conf+'%') : '—')+'</td>' +
-          '<td style="padding:6px">'+(d.w!=null? d.w.toFixed(2) : '—')+'</td>' +
-          '</tr>'
-        );
-      }
-      tb.innerHTML = rows.join('');
-    
-      // Final decision (from last run)
-      const fEl = document.getElementById('mtf-final');
-      if(fEl){
-        const dir = window.__NAIF_last_finalDir || (mtf?mtf.dir:'HOLD');
-        const conf = (window.__NAIF_last_finalConf!=null) ? window.__NAIF_last_finalConf : (mtf?mtf.conf:0);
-        const ar = (window.CUR_LANG==='ar');
-        const title = ar ? 'القرار النهائي بعد المزج: ' : 'Final decision: ';
-        let clr = /BUY|شراء/i.test(dir)? '#22c55e' : /SELL|بيع/i.test(dir)? '#ef4444' : '#9ca3af';
-        fEl.innerHTML = title + '<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:'+clr+';color:#fff;font-weight:700;margin-inline:6px;">'+dir+'</span>' + ' ' + (conf!=null? (conf+'%') :'—');
-      }
-
-      // Mini alignment chart (1m,5m,15m,60m)
-      const chart = document.getElementById('mtf-mini-chart');
-      if(chart){
-        const boxes = [];
-        function box(label, dir){
-          let bg = '#9ca3af';
-          if(/BUY|شراء/i.test(dir)) bg = '#22c55e';
-          else if(/SELL|بيع/i.test(dir)) bg = '#ef4444';
-          return '<div style="min-width:56px;padding:6px 8px;border-radius:8px;background:'+bg+';color:#fff;font-weight:600;text-align:center;">'+label+'</div>';
-        }
-        const d1  = mtf && mtf.details ? mtf.details.find(x=>x.tf===1 && x.ok) : null;
-        const d5  = mtf && mtf.details ? mtf.details.find(x=>x.tf===5 && x.ok) : null;
-        const d15 = mtf && mtf.details ? mtf.details.find(x=>x.tf===15 && x.ok) : null;
-        const c60 = mtf && mtf.ctx60 ? mtf.ctx60 : 'HOLD';
-        boxes.push(box('1m',  d1 ? d1.dir  : 'HOLD'));
-        boxes.push(box('5m',  d5 ? d5.dir  : 'HOLD'));
-        boxes.push(box('15m', d15? d15.dir : 'HOLD'));
-        boxes.push(box('60m', c60));
-        chart.innerHTML = boxes.join('');
-      }
-    }catch(e){ console.error('renderMTFDetails error', e); }
-  };
-
-  // Toggle behavior
-  function toggleMTF(){
-    const box = document.getElementById('mtf-details');
-    const btn = document.getElementById('mtf-toggle');
-    if(!box || !btn) return;
-    const show = box.style.display==='none';
-    box.style.display = show ? 'block' : 'none';
-    // Update label
-    const span = btn.querySelector('[data-i18n="mtfDetails"]');
-    if(span){
-      span.textContent = show ? (window.CUR_LANG==='ar'?'إخفاء التفاصيل':'Hide details') : (window.CUR_LANG==='ar'?'تفاصيل MTF':'MTF details');
-    }
-    // Render current data when opening
-    if(show && window.__NAIF_last_mtf){
-      window.__NAIF_renderMTFDetails(window.__NAIF_last_mtf, window.__NAIF_last_baseTF||1);
-    }
-  }
-  document.addEventListener('click', function(e){
-    if(e.target.id==='mtf-toggle' || e.target.closest('#mtf-toggle')){
-      e.preventDefault(); toggleMTF();
-    }
-  }, {passive:false});
-})();
-</script>
-
-
-<style>
-#naif-footer{position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 9999; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: #0088cc; backdrop-filter: blur(6px); color: #fff; font-size: 13px; line-height: 1; box-shadow: 0 4px 16px rgba(0,0,0,.25); user-select: none;}
-#naif-footer svg{ width:16px; height:16px; display:block; }
-#naif-footer a{ color:#fff; text-decoration:none; }
-#naif-footer a:hover{ text-decoration:underline; }
-</style>
-<div id="naif-footer" dir="rtl" aria-label="حقوق المطور">
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path fill="#ffffff" d="M9.04 15.47 8.9 19.2c.46 0 .66-.2.9-.43l2.16-2.07 4.48 3.29c.82.45 1.4.21 1.62-.76l2.94-13.78h.01c.26-1.22-.44-1.7-1.24-1.4L2.4 9.52c-1.18.46-1.16 1.12-.2 1.43l4.9 1.53L18.7 6.3c.64-.4 1.22-.18.74.22"/>
-  </svg>
-  <span id="naif-footer-text">—</span> <a href="https://t.me/najran2015" target="_blank" rel="noopener">@najran2015</a>
-</div>
-
-
-<script>
-(function(){
-  function updateFooterLang(){
-    try{
-      var el = document.getElementById('naif-footer-text');
-      if(!el) return;
-      var isAr = (window.CUR_LANG === 'ar');
-      el.textContent = isAr ? 'جميع الحقوق محفوظة للمطور' : 'All rights reserved · Developer';
-    }catch(_){}
-  }
-  // Initial
-  document.addEventListener('DOMContentLoaded', updateFooterLang);
-  // Fallback if DOMContentLoaded already fired
-  if(document.readyState === 'interactive' || document.readyState === 'complete'){ updateFooterLang(); }
-  // Light polling in case language is toggled by external controls
-  // Try to catch common language switch interactions
-  document.addEventListener('click', function(){
-    setTimeout(updateFooterLang, 50);
-  }, {passive:true});
-  window.addEventListener('languagechange', updateFooterLang);
-  window.__NAIF_updateFooterLang = updateFooterLang;
-})();
-</script>
-
-
-<script>
-(function(){
-  // Ensure updater exists
-  if (typeof window.__NAIF_updateFooterLang !== 'function') {
-    window.__NAIF_updateFooterLang = function(){
-      try{
-        var el = document.getElementById('naif-footer-text');
-        if(!el) return;
-        var isAr = (window.CUR_LANG === 'ar');
-        el.textContent = isAr ? 'جميع الحقوق محفوظة للمطور' : 'All rights reserved · Developer';
-      }catch(_){}
-    };
-  }
-  // Wire into existing language switchers if present
-  try{
-    if (typeof window.setLang === 'function' && !window.__NAIF_wrapped_setLang){
-      const __orig = window.setLang;
-      window.setLang = function(l){
-        const r = __orig.apply(this, arguments);
-        try{ window.CUR_LANG = l || window.CUR_LANG; }catch(_){}
-        try{ window.__NAIF_updateFooterLang(); }catch(_){}
-        return r;
-      };
-      window.__NAIF_wrapped_setLang = true;
-    }
-  }catch(_){}
-  try{
-    if (typeof window.changeLang === 'function' && !window.__NAIF_wrapped_changeLang){
-      const __orig2 = window.changeLang;
-      window.changeLang = function(l){
-        const r = __orig2.apply(this, arguments);
-        try{ window.CUR_LANG = l || window.CUR_LANG; }catch(_){}
-        try{ window.__NAIF_updateFooterLang(); }catch(_){}
-        return r;
-      };
-      window.__NAIF_wrapped_changeLang = true;
-    }
-  }catch(_){}
-  // Call once now
-  try{ window.__NAIF_updateFooterLang(); }catch(_){}
-})();
-</script>
-
-
-<script>
-(function(){
-  window.__NAIF_lastPrice = window.__NAIF_lastPrice || null;
-  window.naifFormatPrice = function(p){
-    if (p==null || !isFinite(p)) return '—';
-    const abs = Math.abs(p);
-    let d = 5;
-    if (abs >= 200) d = 2;
-    else if (abs >= 50) d = 3;
-    else if (abs >= 2) d = 4;
-    return p.toFixed(d);
-  };
-  window.__NAIF_getEntryPrice = function(sym, tf){
-    try{
-      if (typeof window.__NAIF_lastPrice === 'number') return window.__NAIF_lastPrice;
-      if (typeof mergeWithSrv === 'function'){
-        // prefer 1m to get freshest candle close
-        const s1 = mergeWithSrv(sym, Math.min(1, Number(tf)||1), 40);
-        if (s1 && s1.length) return s1[s1.length-1].c;
-      }
-    }catch(_){}
-    return null;
-  };
-})();
-</script>
-
-
-<script>
-(function(){
-  window.__NAIF_pipSize = window.__NAIF_pipSize || function(sym, price){
-    try{
-      sym = (sym||'').toUpperCase();
-      if(sym.includes('JPY')) return 0.01;
-      if(sym.includes('XAU') || sym.includes('GOLD')) return 0.1;
-      if(sym.includes('XAG') || sym.includes('SILV')) return 0.01;
-      if(sym.includes('BTC') || sym.includes('ETH') || sym.includes('CRYPTO')) return Math.pow(10, -Math.max(1, (String(Math.floor(price)).length-2)));
-      if(sym.includes('USD')) return 0.0001; // default FX
-      // fallback by magnitude
-      const abs = Math.abs(price||1);
-      if(abs >= 1000) return 1;
-      if(abs >= 100) return 0.1;
-      if(abs >= 10) return 0.01;
-      if(abs >= 1) return 0.001;
-      return 0.0001;
-    }catch(_){ return 0.0001; }
-  };
-  window.__NAIF_setPNL = function(dir, entryP, exitP, sym){
-    try{
-      const pnlEl = document.getElementById('res-pnl');
-      if(!pnlEl) return;
-      if(entryP==null || exitP==null){ pnlEl.textContent='—'; return; }
-      const diff = (dir==='BUY') ? (exitP - entryP) : (dir==='SELL') ? (entryP - exitP) : 0;
-      const pip = window.__NAIF_pipSize(sym||'', entryP);
-      const pips = pip ? diff / pip : diff;
-      const sign = diff>0 ? '+' : (diff<0 ? '−' : '');
-      const color = diff>0 ? '#22c55e' : (diff<0 ? '#ef4444' : '#9ca3af');
-      pnlEl.style.color = color;
-      const pipsStr = (Math.abs(pips) >= 10) ? pips.toFixed(1) : pips.toFixed(2);
-      pnlEl.textContent = sign + (Math.abs(diff)).toFixed( (entryP>=10)? 3 : 5 ) + ' (' + sign + pipsStr + ' pips)';
-    }catch(_){}
-  };
-})();
-</script>
-
-
-<!-- ===== Hard Override: Disable all filter-based rejections & messages ===== -->
-<script>
-(function(){
-  const SAFE_TRUE = function(){ return true; };
-  const SAFE_NOOP  = function(){};
-  function softSet(obj,k,v){ try{ if(obj && typeof obj==='object'){ obj[k]=v; } }catch(e){} }
-  window.__NAIF_DISABLE_FILTERS = true;
-
-  // 1) Override known filter functions if present
-  window.__NAIF_filters = window.__NAIF_filters || {};
-  ['htfAgree','confidenceOK','shouldReject','reject','allowedByFilters','filtersOK'].forEach(function(k){
-    if (typeof window.__NAIF_filters[k] === 'function') { softSet(window.__NAIF_filters, k, SAFE_TRUE); }
-  });
-
-  // 2) Override global gates if defined
-  ['canFire','allowedByFilters','filtersOK','rejectSignal','shouldReject'].forEach(function(k){
-    if (typeof window[k] === 'function') { window[k] = SAFE_TRUE; }
-  });
-
-  // 3) Mute any toast/alert with "فلتر" / "HTF" / "رفض"
-  var killRe = /(فلتر|رفض|HTF|mismatch)/i;
-  function silence(msg){ return typeof msg === 'string' && killRe.test(msg); }
-  [['alert', window], ['showToast', window], ['toast', window], ['showNote', window], ['warn', console], ['info', console], ['log', console]].forEach(function(pair){
-    var key = pair[0], obj = pair[1];
-    if (!obj) return;
-    var orig = obj[key];
-    if (typeof orig === 'function'){
-      obj[key] = function(){ if (silence(arguments[0])) return; return orig.apply(this, arguments); };
-    }
-  });
-
-  // 4) Remove any existing DOM messages that contain those words
-  function hideMatches(){
-    try{
-      document.querySelectorAll('div,span,p,li').forEach(function(el){
-        if (el && el.childElementCount === 0 && el.textContent && killRe.test(el.textContent)){
-          el.remove();
-        }
-      });
-    }catch(_){}
-  }
-  new MutationObserver(function(){ hideMatches(); }).observe(document.documentElement, {childList:true, subtree:true});
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hideMatches);
-  else hideMatches();
 })();
 </script>
 
