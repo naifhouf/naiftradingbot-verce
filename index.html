@@ -2920,3 +2920,134 @@ if(!wasReady && nowReady){
 
 </body>
 </html>
+
+<!-- ===== Cross‑Device Generate Signal Booster ===== -->
+<script>
+(function(){
+  // 1) Ensure a safe TF context for all devices
+  window.__TF = window.__TF || { min: 1, ms: 60000, v: 1, u: 'm' };
+  if (!Number.isFinite(Number(__TF.min)) || Number(__TF.min) <= 0){
+    __TF.min = 1;
+    __TF.ms  = 60000;
+  }
+
+  // 2) Fallback modal if missing (keeps your design if it exists already)
+  (function ensureModal(){
+    if (typeof window.signalModal !== 'undefined' && window.signalModal) return;
+    var m = document.getElementById('signal-modal');
+    if (!m){
+      m = document.createElement('div');
+      m.id = 'signal-modal';
+      m.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:99999';
+      m.innerHTML = '<div style="background:#111;padding:18px 16px;border-radius:12px;min-width:280px;max-width:92vw;color:#fff;font-family:system-ui,Segoe UI,Arial">'
+        + '<div style="font-size:14px;opacity:.8;margin-bottom:6px">تم توليد الإشارة</div>'
+        + '<div style="display:grid;grid-template-columns:110px 1fr;gap:8px 12px;font-size:14px">'
+        + '<div>الزوج</div><div id="res-pair">—</div>'
+        + '<div>الفريم</div><div id="res-tf">—</div>'
+        + '<div>القوة</div><div id="res-conf">—</div>'
+        + '<div>وقت الدخول</div><div id="res-entry">—</div>'
+        + '<div>سعر الدخول</div><div id="res-price">—</div>'
+        + '<div>سعر الخروج</div><div id="res-exit">—</div>'
+        + '<div>النتيجة</div><div id="res-pnl">—</div>'
+        + '</div>'
+        + '<div id="cooldown-note" style="margin-top:10px;font-size:12px;opacity:.8"></div>'
+        + '<div style="margin-top:14px;text-align:end"><button id="res-close" style="background:#1f2937;color:#fff;border:0;border-radius:8px;padding:8px 12px">إغلاق</button></div>'
+        + '</div>';
+      document.body.appendChild(m);
+      var closeBtn = m.querySelector('#res-close');
+      if (closeBtn) closeBtn.addEventListener('click', function(){ m.style.display='none'; });
+    }
+    window.signalModal = m;
+  })();
+
+  // 3) Safe openSignal already patched in your file. If missing, define a minimal one.
+  if (typeof window.openSignal !== 'function'){
+    window.openSignal = function(dir, conf, entry, sym, tf){
+      var tfMin = Math.max(1, parseInt(Number(tf)||1,10));
+      var byId = function(id){ return document.getElementById(id); };
+      var m = window.signalModal || document.getElementById('signal-modal');
+      if (byId('res-pair')) byId('res-pair').textContent = sym || '—';
+      if (byId('res-tf')) byId('res-tf').textContent = String(tfMin)+'m';
+      if (byId('res-conf')) byId('res-conf').textContent = String(conf||'—')+'%';
+      if (byId('res-entry')) byId('res-entry').textContent = (entry && entry.toLocaleTimeString) ? entry.toLocaleTimeString('ar-SA') : '—';
+      if (byId('cooldown-note')) byId('cooldown-note').textContent = 'يجب الانتظار ' + tfMin + ' دقيقة قبل الصفقة التالية لهذا الإطار.';
+      if (m && m.style) m.style.display='flex';
+    };
+  }
+
+  // 4) Universal tap/click handler (Android, iPhone, Windows, macOS)
+  function onGenerateTap(ev){
+    try{
+      ev && ev.preventDefault && ev.preventDefault();
+      ev && ev.stopPropagation && ev.stopPropagation();
+
+      // Determine symbol / timeframe from UI if available
+      var sym = (function(){
+        var el = document.querySelector('#pair, [name="pair"], .pair-select, .asset-select, [data-current-pair]');
+        if (el){
+          if (el.value) return el.value;
+          if (el.getAttribute('data-current-pair')) return el.getAttribute('data-current-pair');
+          if (el.textContent && el.textContent.trim()) return el.textContent.trim();
+        }
+        return window.__NAIF_last_sym || 'EURUSD';
+      })();
+
+      var tfMin = (function(){
+        // sources: __TF.min, select[name=tf], data-tf, visible label like "M1"
+        if (window.__TF && Number.isFinite(Number(window.__TF.min))) return Math.max(1, parseInt(window.__TF.min,10));
+        var sel = document.querySelector('#tf, [name="tf"], .tf-select, [data-tf]');
+        if (sel){
+          var v = sel.getAttribute('data-tf') || sel.value || sel.textContent || '1';
+          var m = String(v).match(/\d+/);
+          if (m) return Math.max(1, parseInt(m[0],10));
+        }
+        return 1;
+      })();
+
+      var now = new Date();
+      var entry = new Date(now.getTime()); // enter now
+
+      // Default direction & confidence if none available
+      var dir = window.__NAIF_next_dir || 'BUY';
+      var conf = Math.max(1, Math.min(100, parseInt(window.__NAIF_next_conf||100,10)));
+
+      // Trigger your signal UI
+      window.openSignal(dir, conf, entry, sym, tfMin);
+
+    }catch(e){
+      console.warn('Generate tap error:', e);
+    }
+    return false;
+  }
+
+  function attachTo(el){
+    if (!el || el.__naifBound) return;
+    el.__naifBound = true;
+    var opts = {passive:false};
+    el.addEventListener('click', onGenerateTap, opts);
+    el.addEventListener('touchend', onGenerateTap, opts);
+    el.addEventListener('pointerup', onGenerateTap, opts);
+  }
+
+  function scanAndBind(){
+    // common ids/classes/labels
+    var selectors = [
+      '#btn-generate','#gen-btn','#generate','#get-signal','#getSignal','#signal-gen','#gen','#get_signal','#get-signal-btn',
+      '[data-action="gen"]','.btn-generate','.generate','.btn-get-signal'
+    ];
+    selectors.forEach(function(s){ document.querySelectorAll(s).forEach(attachTo); });
+    // Fallback: buttons with text containing "توليد" or "Signal"
+    Array.prototype.forEach.call(document.querySelectorAll('button, a, .btn, [role="button"]'), function(el){
+      var t = (el.textContent||'').trim();
+      if (/توليد|إشارة|Signal|Generate/i.test(t)) attachTo(el);
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scanAndBind);
+  else scanAndBind();
+
+  // Re-scan if UI changes
+  try{ new MutationObserver(scanAndBind).observe(document.body, {childList:true, subtree:true}); }catch(_){}
+
+})();
+</script>
