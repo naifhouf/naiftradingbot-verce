@@ -541,7 +541,7 @@ const genBtn=document.getElementById('generate-btn');
 const signalModal=document.getElementById('signal-modal');
 const closeSignal=document.getElementById('close-signal');
 const cooldownMap=new Map(); // key: tf minutes -> last timestamp
-function canFire(tf){
+function canFire(tfMin){
   const now=Date.now();
   const last=cooldownMap.get(tf)||0;
   let gap=0;
@@ -574,9 +574,13 @@ function openSignal(dir, conf, entry, sym, tf){
 }
 closeSignal.addEventListener('click',()=>{signalModal.style.display='none';});
 
+
+// Prevent duplicate binding across reloads
+if (!window.__NAIF_GEN_PATCHED) { window.__NAIF_GEN_PATCHED = true; }
+
 genBtn.addEventListener('click',()=>{
   const __TF = __NAIF_getTF(); const tfVal=__TF.v, tfUnit=__TF.u, tfMs=__TF.ms, tfMin=__TF.minutes;
-  const {ok, remain} = canFire(tf);
+  const {ok, remain} = canFire(tfMin);
   if(!ok){
     errorFx();
     const m = Math.ceil(remain/60000);
@@ -584,13 +588,13 @@ genBtn.addEventListener('click',()=>{
     return;
   }
   const sym=currentSymbol();
-  const series=mergeWithSrv(sym, tf, 160);
+  const series=mergeWithSrv(sym, tfMin, 160);
   if(series.length<40){ errorFx(); alert(I18N[CUR_LANG].notEnough); return; }
   const {dir,conf}=scoreAll(series);
-  const now=riyadhNow(); now.setSeconds(0); now.setMilliseconds(0); const entry=new Date(now.getTime()+tf*60000);
+  const now=riyadhNow(); now.setSeconds(0); now.setMilliseconds(0); const entry=new Date(now.getTime() + tfMin*60000);
   openSignal(dir, conf, entry, sym, tf);
   successFx();
-  cooldownMap.set(tf, Date.now());
+  cooldownMap.set(tfMin, Date.now());
 
   // counter (starts from zero each load as requested)
   const cntEl=document.getElementById('signal-count');
@@ -731,7 +735,11 @@ const B=[]; function spawn(){const x=W+Math.random()*200,b=8+Math.random()*24,hi
     // Remove default onclick to avoid duplicate alerts, we'll rebind
     genBtn.onclick = null;
 
-    genBtn.addEventListener('click', function(e){
+    
+// Prevent duplicate binding across reloads
+if (!window.__NAIF_GEN_PATCHED) { window.__NAIF_GEN_PATCHED = true; }
+
+genBtn.addEventListener('click', function(e){
       // replicate original flow (but call filters)
       try{
         const __TF = __NAIF_getTF(); const tfVal=__TF.v, tfUnit=__TF.u, tfMs=__TF.ms, tfMin=__TF.minutes;
