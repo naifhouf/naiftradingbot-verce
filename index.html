@@ -1505,7 +1505,7 @@ document.addEventListener('DOMContentLoaded', function(){
       // Show cooldown message: wait 1 minute before next signal for this TF
       const cd = document.getElementById('cooldown-note');
       if(cd){
-        var mins = tfMin;
+        var mins = Math.max(1, parseInt(Number(tf)||1,10));
         cd.textContent = (function(){ if (CUR_LANG==='ar'){ return (tfUnit==='s' ? ('يجب الانتظار ' + (tfVal) + ' ثانية قبل الصفقة التالية لهذا الإطار.') : ('يجب الانتظار ' + mins + ' دقيقة قبل الصفقة التالية لهذا الإطار.')); } else { return (tfUnit==='s' ? ('You must wait ' + tfVal + ' second(s) before the next trade on this timeframe.') : ('You must wait ' + mins + ' minute(s) before the next trade on this timeframe.')); } })();
       }
 
