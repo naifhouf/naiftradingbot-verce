@@ -612,7 +612,7 @@ function getFlagEmoji(code){const map={EUR:'🇪🇺',USD:'🇺🇸',GBP:'🇬�
 function updateAssetDecor(sym){const iconEl=document.getElementById('asset-icon'); const L=document.getElementById('flag-left'),R=document.getElementById('flag-right'); iconEl.textContent='📈'; L.textContent='🏳️'; R.textContent='🏳️'; for(const k in ICONS){if(sym.startsWith(k)){iconEl.textContent=ICONS[k]; break;}} const m=sym.match(/^([A-Z]{3})([A-Z]{3})/); if(m){L.textContent=getFlagEmoji(m[1]); R.textContent=getFlagEmoji(m[2]);}}
 
 /* ===== WebSocket ===== */
-const WS_URL = (location.protocol==='https:'?'wss://':'ws://') + 'test2-production-ad18.up.railway.app/ws/prices';
+const WS_URL = (((location.protocol==='https:')?'wss://':'ws://') + location.host + '/ws/prices');
 let ws=null,lastPrice=null;
 function wsConnect(){ if(ws && (ws.readyState===WebSocket.OPEN||ws.readyState===WebSocket.CONNECTING)) return; try{ws=new WebSocket(WS_URL);}catch(_){ws=null;} if(ws){ws.onopen=()=>{ try{window.__NAIF_setOnline?.(true);}catch(_){ } sendPair(true);}; ws.onclose=()=>{ try{window.__NAIF_setOnline?.(false);}catch(_){ } setTimeout(wsConnect,1500);}; ws.onmessage=(ev)=>{ try{const msg=JSON.parse(ev.data); handleWs(msg);}catch(e){} };} }
 wsConnect();
@@ -2822,6 +2822,11 @@ if(!wasReady && nowReady){
   document.addEventListener('DOMContentLoaded', syncMtfBtn);
   window.addEventListener('naif-lang-change', syncMtfBtn);
 })();
+</script>
+
+
+<script>
+console.log('[NAIF] Using same-origin WS:', (((location.protocol==='https:')?'wss://':'ws://') + location.host + '/ws/prices'));
 </script>
 
 </body>
